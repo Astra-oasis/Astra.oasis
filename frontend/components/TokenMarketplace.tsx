@@ -67,7 +67,7 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
             tokenContract.getAvailableTokens(),
             tokenContract.pricePerToken(),
             tokenContract.getContractBalance(),
-            connected && address ? tokenContract.balanceOf(address) : Promise.resolve(0n)
+            connected && address ? tokenContract.balanceOf(address) : Promise.resolve(BigInt(0))
           ])
 
           console.log('Token info:', {
@@ -304,213 +304,250 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
   }
 
   return (
-    <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8" style={{
-      maxWidth: '72rem',
-      margin: '2rem auto 0 auto',
-      background: 'white',
-      borderRadius: '0.75rem',
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-      padding: '2rem'
+    <div style={{
+      maxWidth: '100%',
+      margin: '2rem 0 0 0',
+      background: 'rgb(11, 15, 25)',
+      minHeight: '100vh',
+      padding: '2rem 1rem'
     }}>
-      <div className="text-center mb-8" style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h2 className="text-3xl font-bold text-gray-800 mb-2" style={{
-          fontSize: '1.875rem',
-          fontWeight: 'bold',
-          color: '#1f2937',
-          marginBottom: '0.5rem'
-        }}>Token Trading</h2>
-        <p className="text-gray-600" style={{ color: '#4b5563' }}>
-          Mua và bán token trực tiếp - giống pump.fun
-        </p>
-      </div>
+      <div style={{
+        maxWidth: '90rem',
+        margin: '0 auto'
+      }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <h2 style={{
+            fontSize: '2rem',
+            fontWeight: 'bold',
+            color: '#fff',
+            marginBottom: '0.5rem'
+          }}>Token Trading</h2>
+          <p style={{ color: '#9ca3af', fontSize: '0.95rem' }}>
+            Discover và trade tokens - Pump your portfolio 🚀
+          </p>
+        </div>
 
-      <div className="flex justify-between items-center mb-6" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h3 className="text-xl font-semibold" style={{ fontSize: '1.25rem', fontWeight: '600' }}>
-          Tokens có sẵn ({availableTokens.length})
-        </h3>
-        <button
-          onClick={loadAvailableTokens}
-          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          style={{
-            padding: '0.5rem 1rem',
-            background: '#f3f4f6',
-            borderRadius: '0.5rem',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s'
-          }}
-        >
-          🔄 Refresh
-        </button>
-      </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff' }}>
+            Trending Tokens ({availableTokens.length})
+          </h3>
+          <button
+            onClick={loadAvailableTokens}
+            style={{
+              padding: '0.5rem 1rem',
+              background: 'rgba(139, 92, 246, 0.2)',
+              color: '#a78bfa',
+              borderRadius: '0.5rem',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              fontWeight: '500'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+            }}
+          >
+            🔄 Refresh
+          </button>
+        </div>
 
-      <div className="grid gap-6" style={{ display: 'grid', gap: '1.5rem' }}>
         {availableTokens.length === 0 ? (
-          <div className="text-center py-8 text-gray-500" style={{ textAlign: 'center', padding: '2rem 0', color: '#6b7280' }}>
-            <div className="mb-4" style={{ marginBottom: '1rem' }}>
-              <h4 className="text-lg font-medium mb-2" style={{ fontSize: '1.125rem', fontWeight: '500', marginBottom: '0.5rem' }}>
-                Chưa có token nào có sẵn để giao dịch
-              </h4>
-              <p className="text-sm" style={{ fontSize: '0.875rem' }}>
-                Hãy tạo token đầu tiên để bắt đầu giao dịch!
-              </p>
-            </div>
+          <div style={{
+            textAlign: 'center',
+            padding: '4rem 2rem',
+            background: 'rgba(139, 92, 246, 0.05)',
+            borderRadius: '1rem',
+            border: '1px solid rgba(139, 92, 246, 0.2)',
+            color: '#9ca3af'
+          }}>
+            <h4 style={{ fontSize: '1.15rem', fontWeight: '500', marginBottom: '0.5rem', color: '#d1d5db' }}>
+              Chưa có token nào
+            </h4>
+            <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Hãy tạo token đầu tiên để bắt đầu giao dịch!
+            </p>
             <button
-              onClick={() => {
-                // Scroll to top to show create token form
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               style={{
-                padding: '0.5rem 1rem',
-                background: '#9333ea',
-                color: 'white',
+                padding: '0.75rem 1.5rem',
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color: '#fff',
                 borderRadius: '0.5rem',
                 border: 'none',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                fontWeight: '600',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 6px 12px rgba(139, 92, 246, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
               Tạo Token Ngay
             </button>
           </div>
         ) : (
-          availableTokens.map((token) => {
-            const tokenInfo = tokenInfos[token.tokenAddress]
-            const userBalance = userBalances[token.tokenAddress] || 0n
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '1.5rem'
+          }}>
+            {availableTokens.map((token) => {
+              const tokenInfo = tokenInfos[token.tokenAddress]
+              const userBalance = userBalances[token.tokenAddress] || BigInt(0)
+              const marketCap = (parseFloat(formatEther(token.contractBalance)) * parseFloat(formatEther(token.pricePerToken))).toFixed(2)
+              const bondingProgress = Math.min(90, Math.floor(Math.random() * 90) + 10) // Mock bonding progress
 
-            return (
-              <div key={token.tokenAddress} className="border rounded-lg p-6" style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: '0.5rem',
-                padding: '1.5rem',
-                background: '#fafafa'
-              }}>
-                <div className="grid md:grid-cols-2 gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                  {/* Token Info */}
-                  <div>
-                    <h4 className="text-xl font-bold mb-3" style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.75rem' }}>
-                      {tokenInfo?.name || token.name} ({tokenInfo?.symbol || token.symbol})
-                    </h4>
-                    <div className="space-y-2 text-sm" style={{ fontSize: '0.875rem' }}>
-                      <p><strong>Giá:</strong> {formatEther(token.pricePerToken)} TEST per token</p>
-                      <p><strong>Có sẵn:</strong> {formatEther(token.availableAmount)} tokens</p>
-                      <p><strong>Liquidity:</strong> {formatEther(token.contractBalance)} TEST</p>
-                      <p><strong>Creator:</strong> {token.creator ? `${token.creator.slice(0, 6)}...${token.creator.slice(-4)}` : 'Unknown'}</p>
-                      <p><strong>Total Supply:</strong> {formatEther(token.totalSupply)} tokens</p>
-                      {connected && address && (
-                        <p><strong>Bạn sở hữu:</strong> {formatEther(userBalance)} tokens</p>
-                      )}
+              return (
+                <div
+                  key={token.tokenAddress}
+                  style={{
+                    background: 'rgba(17, 24, 39, 0.6)',
+                    border: '1px solid rgba(139, 92, 246, 0.2)',
+                    borderRadius: '0.75rem',
+                    overflow: 'hidden',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(139, 92, 246, 0.2)';
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)';
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  {/* Token Header with Image */}
+                  <div style={{
+                    height: '120px',
+                    background: `linear-gradient(135deg, ${['#8b5cf6', '#7c3aed', '#6d28d9'][Math.floor(Math.random() * 3)]}, ${['#7c3aed', '#6d28d9', '#5b21b6'][Math.floor(Math.random() * 3)]})`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative'
+                  }}>
+                    <div style={{
+                      fontSize: '3rem',
+                      fontWeight: 'bold',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      opacity: 0.9
+                    }}>
+                      {(tokenInfo?.symbol || token.symbol)[0]}
                     </div>
                   </div>
 
-                  {/* Trading Actions */}
-                  <div className="space-y-4" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {/* Buy Section */}
-                    <div className="bg-green-50 p-4 rounded-lg" style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '0.5rem' }}>
-                      <h5 className="font-semibold text-green-800 mb-2" style={{ fontWeight: '600', color: '#166534', marginBottom: '0.5rem' }}>
-                        🟢 Mua Token
-                      </h5>
-                      <div className="flex gap-2" style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input
-                          type="number"
-                          placeholder="Số lượng mua"
-                          min="0"
-                          step="0.000000000000000001"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
-                          style={{
-                            flex: 1,
-                            padding: '0.5rem 0.75rem',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.875rem'
-                          }}
-                          id={`buy-amount-${token.tokenAddress}`}
-                        />
-                        <button
-                          onClick={() => {
-                            const input = document.getElementById(`buy-amount-${token.tokenAddress}`) as HTMLInputElement
-                            const amount = input?.value
-                            if (amount && parseFloat(amount) > 0) {
-                              buyTokenDirect(token.tokenAddress, amount, token.pricePerToken)
-                            } else {
-                              alert('❌ Vui lòng nhập số lượng hợp lệ!')
-                            }
-                          }}
-                          disabled={loading}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded text-sm transition-colors"
-                          style={{
-                            padding: '0.5rem 1rem',
-                            background: loading ? '#9ca3af' : '#16a34a',
-                            color: 'white',
-                            borderRadius: '0.25rem',
-                            border: 'none',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            transition: 'background-color 0.2s',
-                            fontSize: '0.875rem'
-                          }}
-                        >
-                          {loading ? 'Đang mua...' : 'Mua'}
-                        </button>
+                  {/* Token Body */}
+                  <div style={{ padding: '1rem' }}>
+                    {/* Creator Info */}
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      marginBottom: '0.5rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <span>Created by {token.creator ? `${token.creator.slice(0, 6)}...${token.creator.slice(-2)}` : 'Unknown'}</span>
+                      <span style={{ color: '#22c55e', fontWeight: '600' }}>MC: ${marketCap}</span>
+                    </div>
+
+                    {/* Token Info */}
+                    <h3 style={{
+                      fontSize: '1.1rem',
+                      fontWeight: '700',
+                      color: '#fff',
+                      marginBottom: '0.25rem',
+                      lineHeight: 1.2
+                    }}>
+                      {tokenInfo?.name || token.name}
+                    </h3>
+
+                    <p style={{
+                      fontSize: '0.9rem',
+                      color: '#a78bfa',
+                      fontWeight: '600',
+                      marginBottom: '0.5rem'
+                    }}>
+                      ${tokenInfo?.symbol || token.symbol}
+                    </p>
+
+                    {/* Description */}
+                    <p style={{
+                      fontSize: '0.8rem',
+                      color: '#9ca3af',
+                      marginBottom: '0.75rem',
+                      lineHeight: 1.4,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      The most decentralized token on the Sapphire Network scaling...
+                    </p>
+
+                    {/* Bonding Curve */}
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#9ca3af',
+                        marginBottom: '0.25rem',
+                        display: 'flex',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span>BONDING CURVE PROGRESS</span>
+                        <span style={{ color: '#fff', fontWeight: '600' }}>{bondingProgress}%</span>
+                      </div>
+                      <div style={{
+                        width: '100%',
+                        height: '6px',
+                        background: 'rgba(75, 85, 99, 0.3)',
+                        borderRadius: '3px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${bondingProgress}%`,
+                          background: 'linear-gradient(90deg, #22c55e, #84cc16)',
+                          borderRadius: '3px',
+                          transition: 'width 0.3s'
+                        }}></div>
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: '#6b7280',
+                        marginTop: '0.25rem'
+                      }}>
+                        There are {formatEther(token.availableAmount).slice(0, 6)} A in the bonding curve
                       </div>
                     </div>
 
-                    {/* Sell Section */}
-                    {userBalance > 0n && (
-                      <div className="bg-red-50 p-4 rounded-lg" style={{ background: '#fef2f2', padding: '1rem', borderRadius: '0.5rem' }}>
-                        <h5 className="font-semibold text-red-800 mb-2" style={{ fontWeight: '600', color: '#991b1b', marginBottom: '0.5rem' }}>
-                          🔴 Bán Token
-                        </h5>
-                        <div className="flex gap-2" style={{ display: 'flex', gap: '0.5rem' }}>
-                          <input
-                            type="number"
-                            placeholder="Số lượng bán"
-                            min="0"
-                            max={formatEther(userBalance)}
-                            step="0.000000000000000001"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
-                            style={{
-                              flex: 1,
-                              padding: '0.5rem 0.75rem',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '0.25rem',
-                              fontSize: '0.875rem'
-                            }}
-                            id={`sell-amount-${token.tokenAddress}`}
-                          />
-                          <button
-                            onClick={() => {
-                              const input = document.getElementById(`sell-amount-${token.tokenAddress}`) as HTMLInputElement
-                              const amount = input?.value
-                              if (amount && parseFloat(amount) > 0) {
-                                sellTokenDirect(token.tokenAddress, amount)
-                              } else {
-                                alert('❌ Vui lòng nhập số lượng hợp lệ!')
-                              }
-                            }}
-                            disabled={loading}
-                            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded text-sm transition-colors"
-                            style={{
-                              padding: '0.5rem 1rem',
-                              background: loading ? '#9ca3af' : '#dc2626',
-                              color: 'white',
-                              borderRadius: '0.25rem',
-                              border: 'none',
-                              cursor: loading ? 'not-allowed' : 'pointer',
-                              transition: 'background-color 0.2s',
-                              fontSize: '0.875rem'
-                            }}
-                          >
-                            {loading ? 'Đang bán...' : 'Bán'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    {/* Replies and Price */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.8rem',
+                      color: '#9ca3af',
+                      borderTop: '1px solid rgba(139, 92, 246, 0.2)',
+                      paddingTop: '0.75rem'
+                    }}>
+                      <span>📝 {Math.floor(Math.random() * 200)} replies</span>
+                      <span style={{ color: '#22c55e', fontWeight: '600' }}>Price: {formatEther(token.pricePerToken).slice(0, 8)} TEST</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })
+              )
+            })}
+          </div>
         )}
       </div>
     </div>

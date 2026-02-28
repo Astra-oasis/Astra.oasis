@@ -341,12 +341,12 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
 
   if (!connected) {
     return (
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8" style={{
+      <div className="max-w-md mx-auto bg-pump-card rounded-xl border border-gray-800 p-8" style={{
         maxWidth: '28rem',
         margin: '0 auto',
-        background: 'white',
+        background: 'rgb(11, 15, 25)',
         borderRadius: '0.75rem',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        border: '1px solid rgba(139, 92, 246, 0.2)',
         padding: '2rem'
       }}>
         <div className="text-center space-y-6" style={{ textAlign: 'center' }}>
@@ -367,13 +367,13 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
             }}>T</span>
           </div>
           <div style={{ marginBottom: '1.5rem' }}>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2" style={{
+            <h2 className="text-2xl font-bold text-white mb-2" style={{
               fontSize: '1.5rem',
               fontWeight: 'bold',
-              color: '#1f2937',
+              color: '#ffffff',
               marginBottom: '0.5rem'
             }}>Token Creator</h2>
-            <p className="text-gray-600" style={{ color: '#4b5563' }}>Tạo token của riêng bạn trên Oasis Sapphire</p>
+            <p className="text-gray-400" style={{ color: '#9ca3af' }}>Tạo token của riêng bạn trên Oasis Sapphire</p>
           </div>
           <button
             onClick={connectWallet}
@@ -407,12 +407,12 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
   }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8" style={{
+    <div className="max-w-2xl mx-auto bg-pump-card rounded-xl border border-gray-800 p-8" style={{
       maxWidth: '42rem',
       margin: '0 auto',
-      background: 'white',
+      background: 'rgb(11, 15, 25)',
       borderRadius: '0.75rem',
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+      border: '1px solid rgba(139, 92, 246, 0.2)',
       padding: '2rem'
     }}>
       <div className="text-center mb-8" style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -432,27 +432,28 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
             fontWeight: 'bold'
           }}>T</span>
         </div>
-        <h2 className="text-3xl font-bold text-gray-800 mb-2" style={{
+        <h2 className="text-3xl font-bold text-white mb-2" style={{
           fontSize: '1.875rem',
           fontWeight: 'bold',
-          color: '#1f2937',
+          color: '#ffffff',
           marginBottom: '0.5rem'
         }}>Create Your Token</h2>
-        <p className="text-gray-600" style={{ color: '#4b5563' }}>Deploy your own ERC20 token on Oasis Sapphire</p>
+        <p className="text-gray-400" style={{ color: '#9ca3af' }}>Deploy your own ERC20 token on Oasis Sapphire</p>
       </div>
 
       {/* Wallet Info */}
-      <div className="bg-gray-50 rounded-lg p-4 mb-6" style={{
-        background: '#f9fafb',
+      <div className="bg-pump-bg rounded-lg p-4 mb-6 border border-gray-800" style={{
+        background: 'rgba(17, 24, 39, 0.5)',
         borderRadius: '0.5rem',
         padding: '1rem',
-        marginBottom: '1.5rem'
+        marginBottom: '1.5rem',
+        border: '1px solid rgba(139, 92, 246, 0.2)'
       }}>
-        <p className="text-sm text-gray-600" style={{ fontSize: '0.875rem', color: '#4b5563' }}>Connected Wallet:</p>
-        <p className="font-mono text-sm text-gray-800 break-all" style={{
+        <p className="text-sm text-gray-400" style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Connected Wallet:</p>
+        <p className="font-mono text-sm text-gray-300 break-all" style={{
           fontFamily: 'monospace',
           fontSize: '0.875rem',
-          color: '#1f2937',
+          color: '#d1d5db',
           wordBreak: 'break-all'
         }}>{address}</p>
       </div>
@@ -461,11 +462,11 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
       <div className="space-y-6" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div className="grid md:grid-cols-2 gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" style={{
+            <label className="block text-sm font-medium text-gray-300 mb-2" style={{
               display: 'block',
               fontSize: '0.875rem',
               fontWeight: '500',
-              color: '#374151',
+              color: '#d1d5db',
               marginBottom: '0.5rem'
             }}>
               Token Name *
@@ -475,24 +476,26 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="e.g. My Awesome Token"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-pump-green focus:border-transparent bg-pump-bg text-white"
               style={{
                 width: '100%',
                 padding: '0.75rem 1rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
                 borderRadius: '0.5rem',
                 outline: 'none',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                background: 'rgba(31, 41, 55, 0.4)',
+                color: '#ffffff'
               }}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2" style={{
+            <label className="block text-sm font-medium text-gray-300 mb-2" style={{
               display: 'block',
               fontSize: '0.875rem',
               fontWeight: '500',
-              color: '#374151',
+              color: '#d1d5db',
               marginBottom: '0.5rem'
             }}>
               Symbol *
@@ -502,25 +505,27 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
               value={form.symbol}
               onChange={(e) => setForm({ ...form, symbol: e.target.value.toUpperCase() })}
               placeholder="e.g. MAT"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-pump-green focus:border-transparent bg-pump-bg text-white"
               style={{
                 width: '100%',
                 padding: '0.75rem 1rem',
-                border: '1px solid #d1d5db',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
                 borderRadius: '0.5rem',
                 outline: 'none',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                background: 'rgba(31, 41, 55, 0.4)',
+                color: '#ffffff'
               }}
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" style={{
+          <label className="block text-sm font-medium text-gray-300 mb-2" style={{
             display: 'block',
             fontSize: '0.875rem',
             fontWeight: '500',
-            color: '#374151',
+            color: '#d1d5db',
             marginBottom: '0.5rem'
           }}>
             Total Supply *
@@ -531,24 +536,26 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
             onChange={(e) => setForm({ ...form, totalSupply: e.target.value })}
             placeholder="e.g. 1000000"
             min="1"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-pump-green focus:border-transparent bg-pump-bg text-white"
             style={{
               width: '100%',
               padding: '0.75rem 1rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
               borderRadius: '0.5rem',
               outline: 'none',
-              fontSize: '1rem'
+              fontSize: '1rem',
+              background: 'rgba(31, 41, 55, 0.4)',
+              color: '#ffffff'
             }}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" style={{
+          <label className="block text-sm font-medium text-gray-300 mb-2" style={{
             display: 'block',
             fontSize: '0.875rem',
             fontWeight: '500',
-            color: '#374151',
+            color: '#d1d5db',
             marginBottom: '0.5rem'
           }}>
             Price Per Token (TEST) *
@@ -560,14 +567,16 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
             placeholder="e.g. 0.001"
             min="0"
             step="0.000000000000000001"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-pump-green focus:border-transparent bg-pump-bg text-white"
             style={{
               width: '100%',
               padding: '0.75rem 1rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
               borderRadius: '0.5rem',
               outline: 'none',
-              fontSize: '1rem'
+              fontSize: '1rem',
+              background: 'rgba(31, 41, 55, 0.4)',
+              color: '#ffffff'
             }}
           />
           <p className="text-xs text-gray-500 mt-1" style={{
@@ -580,11 +589,11 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" style={{
+          <label className="block text-sm font-medium text-gray-300 mb-2" style={{
             display: 'block',
             fontSize: '0.875rem',
             fontWeight: '500',
-            color: '#374151',
+            color: '#d1d5db',
             marginBottom: '0.5rem'
           }}>
             Description
@@ -594,26 +603,28 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="Describe your token..."
             rows={3}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-pump-green focus:border-transparent bg-pump-bg text-white"
             style={{
               width: '100%',
               padding: '0.75rem 1rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
               borderRadius: '0.5rem',
               outline: 'none',
               fontSize: '1rem',
               resize: 'vertical',
-              minHeight: '80px'
+              minHeight: '80px',
+              background: 'rgba(31, 41, 55, 0.4)',
+              color: '#ffffff'
             }}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2" style={{
+          <label className="block text-sm font-medium text-gray-300 mb-2" style={{
             display: 'block',
             fontSize: '0.875rem',
             fontWeight: '500',
-            color: '#374151',
+            color: '#d1d5db',
             marginBottom: '0.5rem'
           }}>
             Token Image
@@ -622,20 +633,22 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
             type="file"
             accept="image/*"
             onChange={handleImageUpload}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-pump-green focus:border-transparent bg-pump-bg text-white"
             style={{
               width: '100%',
               padding: '0.75rem 1rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid rgba(139, 92, 246, 0.2)',
               borderRadius: '0.5rem',
               outline: 'none',
-              fontSize: '1rem'
+              fontSize: '1rem',
+              background: 'rgba(31, 41, 55, 0.4)',
+              color: '#ffffff'
             }}
           />
           {form.image && (
-            <p className="text-sm text-green-600 mt-2" style={{
+            <p className="text-sm text-pump-green mt-2" style={{
               fontSize: '0.875rem',
-              color: '#059669',
+              color: '#4ade80',
               marginTop: '0.5rem'
             }}>
               Selected: {form.image.name}
@@ -644,27 +657,28 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
         </div>
 
         {form.totalSupply && form.pricePerToken && (
-          <div className="bg-blue-50 rounded-lg p-4" style={{
-            background: '#eff6ff',
+          <div className="bg-pump-accent/10 rounded-lg p-4 border border-pump-accent/30" style={{
+            background: 'rgba(139, 92, 246, 0.1)',
             borderRadius: '0.5rem',
-            padding: '1rem'
+            padding: '1rem',
+            border: '1px solid rgba(139, 92, 246, 0.3)'
           }}>
-            <p className="text-sm text-blue-800 font-medium" style={{
+            <p className="text-sm text-pump-accent font-medium" style={{
               fontSize: '0.875rem',
-              color: '#1e40af',
+              color: '#c4b5fd',
               fontWeight: '500'
             }}>
               Token Overview:
             </p>
-            <div className="text-sm text-blue-700 mt-2 space-y-1" style={{
+            <div className="text-sm text-gray-300 mt-2 space-y-1" style={{
               fontSize: '0.875rem',
-              color: '#1d4ed8',
+              color: '#d1d5db',
               marginTop: '0.5rem'
             }}>
               <p>Total Supply: {parseInt(form.totalSupply).toLocaleString()} {form.symbol || 'tokens'}</p>
               <p>Price per Token: {form.pricePerToken} TEST</p>
               <p>Total Value: {(parseInt(form.totalSupply || '0') * parseFloat(form.pricePerToken || '0')).toFixed(6)} TEST</p>
-              <p className="text-xs text-blue-600 mt-2" style={{ fontSize: '0.75rem', color: '#2563eb', marginTop: '0.5rem' }}>
+              <p className="text-xs text-pump-accent mt-2" style={{ fontSize: '0.75rem', color: '#a78bfa', marginTop: '0.5rem' }}>
                 💡 Smart contract sẽ nắm giữ tất cả tokens và tự động bán theo giá đã đặt
               </p>
             </div>
@@ -674,12 +688,12 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
         <button
           onClick={createToken}
           disabled={loading || !form.name || !form.symbol || !form.totalSupply || !form.pricePerToken}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-4 px-6 rounded-lg transition duration-200 transform hover:scale-105 disabled:scale-100"
+          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-4 px-6 rounded-lg transition duration-200"
           style={{
             width: '100%',
             background: loading || !form.name || !form.symbol || !form.totalSupply || !form.pricePerToken
-              ? 'linear-gradient(90deg, #9ca3af, #9ca3af)'
-              : 'linear-gradient(90deg, #9333ea, #db2777)',
+              ? 'linear-gradient(90deg, #4b5563, #4b5563)'
+              : 'linear-gradient(90deg, #9333ea, #7c3aed)',
             color: 'white',
             fontWeight: 'bold',
             padding: '1rem 1.5rem',
@@ -687,19 +701,16 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
             border: 'none',
             cursor: loading || !form.name || !form.symbol || !form.totalSupply || !form.pricePerToken ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s',
-            transform: 'scale(1)',
             fontSize: '1rem'
           }}
           onMouseEnter={(e) => {
             if (!loading && form.name && form.symbol && form.totalSupply && form.pricePerToken) {
-              e.currentTarget.style.background = 'linear-gradient(90deg, #7c3aed, #be185d)';
-              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.background = 'linear-gradient(90deg, #7c3aed, #6d28d9)';
             }
           }}
           onMouseLeave={(e) => {
             if (!loading && form.name && form.symbol && form.totalSupply && form.pricePerToken) {
-              e.currentTarget.style.background = 'linear-gradient(90deg, #9333ea, #db2777)';
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'linear-gradient(90deg, #9333ea, #7c3aed)';
             }
           }}
         >
@@ -709,26 +720,27 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
 
       {/* Transaction Info */}
       {txHash && (
-        <div className="mt-6 bg-blue-50 rounded-lg p-4" style={{
+        <div className="mt-6 bg-pump-accent/10 rounded-lg p-4 border border-pump-accent/30" style={{
           marginTop: '1.5rem',
-          background: '#eff6ff',
+          background: 'rgba(139, 92, 246, 0.1)',
           borderRadius: '0.5rem',
-          padding: '1rem'
+          padding: '1rem',
+          border: '1px solid rgba(139, 92, 246, 0.3)'
         }}>
-          <p className="text-sm text-blue-800 font-medium" style={{
+          <p className="text-sm text-pump-accent font-medium" style={{
             fontSize: '0.875rem',
-            color: '#1e40af',
+            color: '#c4b5fd',
             fontWeight: '500'
           }}>Transaction Hash:</p>
           <a
             href={`https://testnet.explorer.sapphire.oasis.io/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-sm text-blue-600 hover:underline break-all"
+            className="font-mono text-sm text-pump-accent hover:text-pump-green break-all"
             style={{
               fontFamily: 'monospace',
               fontSize: '0.875rem',
-              color: '#2563eb',
+              color: '#a78bfa',
               textDecoration: 'none',
               wordBreak: 'break-all'
             }}
@@ -740,30 +752,31 @@ export default function CreateToken({ onTokenCreated, onConnectionChange, onToke
 
       {/* Created Token */}
       {createdToken && (
-        <div className="mt-6 bg-green-50 rounded-lg p-4" style={{
+        <div className="mt-6 bg-pump-green/10 rounded-lg p-4 border border-pump-green/30" style={{
           marginTop: '1.5rem',
-          background: '#f0fdf4',
+          background: 'rgba(74, 222, 128, 0.1)',
           borderRadius: '0.5rem',
-          padding: '1rem'
+          padding: '1rem',
+          border: '1px solid rgba(74, 222, 128, 0.3)'
         }}>
-          <p className="text-sm text-green-800 font-medium" style={{
+          <p className="text-sm text-pump-green font-medium" style={{
             fontSize: '0.875rem',
-            color: '#166534',
+            color: '#86efac',
             fontWeight: '500'
           }}>Token Created Successfully!</p>
-          <p className="text-sm text-green-700" style={{
+          <p className="text-sm text-gray-300" style={{
             fontSize: '0.875rem',
-            color: '#15803d'
+            color: '#d1d5db'
           }}>Contract Address:</p>
           <a
             href={`https://testnet.explorer.sapphire.oasis.io/address/${createdToken}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-sm text-green-600 hover:underline break-all"
+            className="font-mono text-sm text-pump-green hover:text-pump-green/80 break-all"
             style={{
               fontFamily: 'monospace',
               fontSize: '0.875rem',
-              color: '#16a34a',
+              color: '#86efac',
               textDecoration: 'none',
               wordBreak: 'break-all'
             }}
