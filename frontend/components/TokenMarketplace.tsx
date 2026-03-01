@@ -4,6 +4,7 @@ import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { BrowserProvider, Contract, formatEther, parseEther } from 'ethers'
 import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime'
 import { TOKEN_ABI, FACTORY_ABI, FACTORY_ADDRESS } from '../abi/factoryAbi'
+import TokenTrader from './TokenTrader'
 
 declare global {
   interface Window {
@@ -28,6 +29,8 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
   const [tokenInfos, setTokenInfos] = useState<{ [address: string]: TokenInfo }>({})
   const [userBalances, setUserBalances] = useState<{ [address: string]: bigint }>({})
   const [loading, setLoading] = useState(false)
+  const [selectedToken, setSelectedToken] = useState<any>(null)
+  const [showTrader, setShowTrader] = useState(false)
 
   // Expose refresh function to parent
   useImperativeHandle(ref, () => ({
@@ -406,6 +409,10 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
               return (
                 <div
                   key={token.tokenAddress}
+                  onClick={() => {
+                    setSelectedToken(token)
+                    setShowTrader(true)
+                  }}
                   style={{
                     background: 'rgba(17, 24, 39, 0.6)',
                     border: '1px solid rgba(139, 92, 246, 0.2)',
@@ -550,6 +557,74 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
           </div>
         )}
       </div>
+
+      {/* Trading Modal */}
+      {showTrader && selectedToken && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(5px)'
+        }}>
+          <div style={{
+            background: 'rgba(15, 23, 42, 0.95)',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            border: '1px solid rgba(139, 92, 246, 0.2)',
+            position: 'relative'
+          }}>
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowTrader(false)
+                setSelectedToken(null)
+              }}
+              style={{
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                background: 'rgba(139, 92, 246, 0.2)',
+                border: 'none',
+                color: '#a78bfa',
+                width: '2rem',
+                height: '2rem',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                fontSize: '1.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Token Info Header */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h2 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+                {tokenInfos[selectedToken.tokenAddress]?.name || selectedToken.name}
+              </h2>
+              <p style={{ color: '#a78bfa' }}>
+                {tokenInfos[selectedToken.tokenAddress]?.symbol || selectedToken.symbol}
+              </p>
+            </div>
+
+            {/* BondingCurveTrader */}
+            <TokenTrader selectedToken={selectedToken} />
+          </div>
+        </div>
+      )}
     </div>
   )
 })

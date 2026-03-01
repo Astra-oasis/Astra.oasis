@@ -6,7 +6,7 @@ import { BONDING_CURVE_ADDRESS, BONDING_CURVE_ABI } from '@/abi/bondingCurveAbi'
 
 // IMPORTANTE: Cập nhật các địa chỉ này
 const TOKEN_X_ADDRESS = "0x614Cb533EB4691794790366eF5B84cAC6aDf9959";
-const TOKEN_TEST_ADDRESS = "0x69406A09aDCE3A662166Ad33c5e432204e438A77";
+const TOKEN_TEST_ADDRESS = "0xe824Ed6ED596f4c415e93145a58c86a57984136A";
 
 const ERC20_ABI = [
     "function approve(address spender, uint256 amount) external returns (bool)",
@@ -118,13 +118,25 @@ export default function BondingCurveTrader() {
             const signer = await provider.getSigner();
             const contract = new ethers.Contract(BONDING_CURVE_ADDRESS, BONDING_CURVE_ABI, signer);
 
+            // Approve token trước
+            const tokenToApprove = selectedSwap === 'X_TO_TEST' ? TOKEN_X_ADDRESS : TOKEN_TEST_ADDRESS;
+            const tokenContract = new ethers.Contract(tokenToApprove, ERC20_ABI, signer);
+            const approveTx = await tokenContract.approve(
+                BONDING_CURVE_ADDRESS,
+                ethers.parseEther(amountIn)
+            );
+            await approveTx.wait();
+            console.log('✅ Token approved');
+
             let tx;
             const amountParsed = ethers.parseEther(amountIn);
+            // Slippage 5% (minAmount = 95% of amountOut)
+            const minAmountOut = ethers.parseEther((parseFloat(amountOut) * 0.95).toString());
 
             if (selectedSwap === 'X_TO_TEST') {
-                tx = await contract.swapXForTest(amountParsed);
+                tx = await contract.swapXForTest(amountParsed, minAmountOut);
             } else {
-                tx = await contract.swapTestForX(amountParsed);
+                tx = await contract.swapTestForX(amountParsed, minAmountOut);
             }
 
             await tx.wait();
@@ -136,7 +148,7 @@ export default function BondingCurveTrader() {
             await fetchPoolInfo();
         } catch (error) {
             console.error('Error during swap:', error);
-            alert('❌ Swap failed');
+            alert('❌ Swap failed: ' + (error as any).message);
         } finally {
             setLoading(false);
         }

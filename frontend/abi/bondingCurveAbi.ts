@@ -1,7 +1,7 @@
 // BondingCurve ABI và contract address
 // Cập nhật BONDING_CURVE_ADDRESS sau khi deploy
 
-export const BONDING_CURVE_ADDRESS = "0x883fBeD6f058A679a46A5483883210197A6FA1B1";
+export const BONDING_CURVE_ADDRESS = "0xB3Ad4eb3590Ef65b8D4816b1030b465404d1e7a1";
 
 export const BONDING_CURVE_ABI = [
     {
@@ -123,14 +123,20 @@ export const BONDING_CURVE_ABI = [
         type: "function"
     },
     {
-        inputs: [{ internalType: "uint256", name: "amountXIn", type: "uint256" }],
+        inputs: [
+            { internalType: "uint256", name: "amountXIn", type: "uint256" },
+            { internalType: "uint256", name: "minAmountTestOut", type: "uint256" }
+        ],
         name: "swapXForTest",
         outputs: [{ internalType: "uint256", name: "amountTestOut", type: "uint256" }],
         stateMutability: "nonpayable",
         type: "function"
     },
     {
-        inputs: [{ internalType: "uint256", name: "amountTestIn", type: "uint256" }],
+        inputs: [
+            { internalType: "uint256", name: "amountTestIn", type: "uint256" },
+            { internalType: "uint256", name: "minAmountXOut", type: "uint256" }
+        ],
         name: "swapTestForX",
         outputs: [{ internalType: "uint256", name: "amountXOut", type: "uint256" }],
         stateMutability: "nonpayable",
