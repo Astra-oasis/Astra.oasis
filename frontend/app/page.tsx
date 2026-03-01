@@ -6,6 +6,7 @@ import Header from '../components/Header'
 
 const CreateToken = dynamic(() => import('../components/CreateToken'), { ssr: false })
 const TokenMarketplace = dynamic(() => import('../components/TokenMarketplace'), { ssr: false })
+const BondingCurveTrader = dynamic(() => import('../components/BondingCurveTrader'), { ssr: false })
 
 export default function Home() {
   const [connected, setConnected] = useState(false)
@@ -13,7 +14,7 @@ export default function Home() {
   const [createdTokens, setCreatedTokens] = useState<string[]>([])
 
   // TAB STATE
-  const [tab, setTab] = useState<'showMarketplace' | 'create'>('showMarketplace')
+  const [tab, setTab] = useState<'showMarketplace' | 'create' | 'bonding'>('showMarketplace')
 
   // Khi tạo token xong → quay về market
   const handleTokenCreated = (tokenAddress: string) => {
@@ -50,7 +51,7 @@ export default function Home() {
     if (saved) {
       try {
         setCreatedTokens(JSON.parse(saved))
-      } catch {}
+      } catch { }
     }
 
     const checkConnection = async () => {
@@ -80,7 +81,7 @@ export default function Home() {
 
         // 👇 TRUYỀN TAB
         activeTab={tab}
-        onChangeTab={setTab}
+        onChangeTab={setTab as any}
       />
 
       {/* CONTENT */}
@@ -104,6 +105,13 @@ export default function Home() {
               setAddress(a)
             }}
           />
+        )}
+
+        {/* BONDING CURVE */}
+        {tab === 'bonding' && connected && (
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <BondingCurveTrader />
+          </div>
         )}
 
       </main>

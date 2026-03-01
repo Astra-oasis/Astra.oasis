@@ -18,8 +18,8 @@ interface HeaderProps {
   onConnectWallet: () => void;
   walletConnected: boolean;
   walletAddress?: string;
-  activeTab: 'showMarketplace' | 'create';
-  onChangeTab: (tab: 'showMarketplace' | 'create') => void;
+  activeTab: 'showMarketplace' | 'create' | 'bonding';
+  onChangeTab: (tab: 'showMarketplace' | 'create' | 'bonding') => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -241,6 +241,33 @@ const Header: React.FC<HeaderProps> = ({
               >
                 <PlusCircle style={{ width: '16px', height: '16px' }} />
                 Create Token
+              </button>
+
+              <button
+                onClick={() => onChangeTab('bonding')}
+                style={{
+                  ...navButtonBaseStyle,
+                  color: activeTab === 'bonding' ? '#fff' : '#d1d5db',
+                  backgroundColor:
+                    activeTab === 'bonding'
+                      ? 'rgba(139, 92, 246, 0.15)'
+                      : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'bonding') {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.color = '#fff';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'bonding') {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#d1d5db';
+                  }
+                }}
+              >
+                <span>🔄</span>
+                Trading
               </button>
 
 
