@@ -2,7 +2,7 @@ import pkg from "hardhat";
 const { ethers } = pkg;
 
 const BONDING_CURVE_ADDRESS =
-    "0x883fBeD6f058A679a46A5483883210197A6FA1B1";
+    "0xB3Ad4eb3590Ef65b8D4816b1030b465404d1e7a1";
 
 async function main() {
     const bonding = await ethers.getContractAt(

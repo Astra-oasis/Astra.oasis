@@ -18,8 +18,8 @@ async function main() {
     const wallet = new ethers.Wallet(privateKey, provider);
 
     const tokenXAddress = "0x614Cb533EB4691794790366eF5B84cAC6aDf9959";
-    const tokenTestAddress = "0x69406A09aDCE3A662166Ad33c5e432204e438A77";
-    const bondingAddress = "0x883fBeD6f058A679a46A5483883210197A6FA1B1";
+    const tokenTestAddress = "0xe824Ed6ED596f4c415e93145a58c86a57984136A";
+    const bondingAddress = "0xB3Ad4eb3590Ef65b8D4816b1030b465404d1e7a1";
 
     const erc20Abi = [
         "function approve(address,uint256) returns (bool)",

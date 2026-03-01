@@ -17,7 +17,7 @@ async function main() {
         "0x614Cb533EB4691794790366eF5B84cAC6aDf9959"
     );
     const tokenTestAddress = ethers.getAddress(
-        "0x69406A09aDCE3A662166Ad33c5e432204e438A77"
+        "0xe824Ed6ED596f4c415e93145a58c86a57984136A"
     );
 
     // thêm metadata mạng vào provider để tránh ethers gọi ENS

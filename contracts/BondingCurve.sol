@@ -136,13 +136,14 @@ contract BondingCurve {
     
     // Swap Token X lấy Token Test
     // Người dùng gửi Token X, nhận lại Token Test
-    function swapXForTest(uint256 amountXIn) external returns (uint256 amountTestOut) {
+    function swapXForTest(uint256 amountXIn, uint256 minAmountTestOut) external returns (uint256 amountTestOut) {
         require(amountXIn > 0, "Amount in must be greater than 0");
         require(reserveX > 0 && reserveTest > 0, "Pool has no liquidity");
         
         // Tính toán số lượng Token Test nhận được
         amountTestOut = getOutputAmount(amountXIn, reserveX, reserveTest);
         require(amountTestOut > 0, "Insufficient output amount");
+        require(amountTestOut >= minAmountTestOut, "Slippage tolerance exceeded");
         require(amountTestOut <= reserveTest, "Insufficient liquidity");
         
         // Transfer Token X từ user vào contract
@@ -169,13 +170,14 @@ contract BondingCurve {
     
     // Swap Token Test lấy Token X
     // Người dùng gửi Token Test, nhận lại Token X
-    function swapTestForX(uint256 amountTestIn) external returns (uint256 amountXOut) {
+    function swapTestForX(uint256 amountTestIn, uint256 minAmountXOut) external returns (uint256 amountXOut) {
         require(amountTestIn > 0, "Amount in must be greater than 0");
         require(reserveX > 0 && reserveTest > 0, "Pool has no liquidity");
         
         // Tính toán số lượng Token X nhận được
         amountXOut = getOutputAmount(amountTestIn, reserveTest, reserveX);
         require(amountXOut > 0, "Insufficient output amount");
+        require(amountXOut >= minAmountXOut, "Slippage tolerance exceeded");
         require(amountXOut <= reserveX, "Insufficient liquidity");
         
         // Transfer Token Test từ user vào contract
