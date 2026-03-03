@@ -5,40 +5,39 @@ contract TokenPolicyMint {
     string public name;
     string public symbol;
     uint8 public decimals = 18;
-    uint256 public totalSupply;
+    uint256 public constant TOTAL_SUPPLY = 1_000_000_000 * 10**18;
+    
     string public metadataURI;
     address public creator;
-    uint256 public pricePerToken;
     bool public isForSale;
+    
+    uint256 public soldSupply;
+    uint256 public reserveBalance;
     
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
     
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
-    event TokenPurchased(address indexed buyer, uint256 amount, uint256 totalPrice);
-    event TokenSold(address indexed seller, uint256 amount, uint256 totalPrice);
-    event PriceUpdated(uint256 newPrice);
-    event SaleStatusChanged(bool isForSale);
+    event TokenPurchased(address indexed buyer, uint256 amount, uint256 totalPrice, uint256 newPrice);
+    event TokenSold(address indexed seller, uint256 amount, uint256 totalPrice, uint256 newPrice);
     
     constructor(
         string memory _name,
         string memory _symbol,
-        uint256 _totalSupply,  //Toi da cap nhạp toltal supply từ người dùng nhé húp
         string memory _metadataURI,
-        address _creator,
-        uint256 _pricePerToken
+        address _creator
     ) {
         name = _name;
         symbol = _symbol;
-        totalSupply = _totalSupply;
         metadataURI = _metadataURI;
         creator = _creator;
-        pricePerToken = _pricePerToken;
         isForSale = true;
+        soldSupply = 0;
+        reserveBalance = 0;
         
-        balanceOf[address(this)] = totalSupply;
-        emit Transfer(address(0), address(this), totalSupply);
+        balanceOf[address(this)] = TOTAL_SUPPLY;
+        emit Transfer(address(0), address(this), TOTAL_SUPPLY);
     }
     
     modifier onlyCreator() {
@@ -46,68 +45,110 @@ contract TokenPolicyMint {
         _;
     }
     
+    function getCurrentPrice() public view returns (uint256) {
+        if (soldSupply == 0) return 5e16;
+        uint256 tokensInUnits = soldSupply / 1e18;
+        return 5e16 + (tokensInUnits * 1e13);
+    }
+    
+    function getBuyPrice(uint256 amount) public view returns (uint256) {
+        if (amount == 0) return 0;
+        
+        uint256 tokensInUnits = amount / 1e18;
+        uint256 currentSoldUnits = soldSupply / 1e18;
+        
+        uint256 startPrice = 5e16 + (currentSoldUnits * 1e13);
+        uint256 endPrice = 5e16 + ((currentSoldUnits + tokensInUnits) * 1e13);
+        uint256 avgPrice = (startPrice + endPrice) / 2;
+        
+        return (avgPrice * amount) / 1e18;
+    }
+    
+    function getSellPrice(uint256 amount) public view returns (uint256) {
+        if (amount == 0 || amount > soldSupply) return 0;
+        
+        uint256 tokensInUnits = amount / 1e18;
+        uint256 currentSoldUnits = soldSupply / 1e18;
+        
+        if (currentSoldUnits < tokensInUnits) return 0;
+        
+        uint256 startPrice = 5e16 + (currentSoldUnits * 1e13);
+        uint256 endPrice = 5e16 + ((currentSoldUnits - tokensInUnits) * 1e13);
+        uint256 avgPrice = (startPrice + endPrice) / 2;
+        
+        uint256 refund = (avgPrice * amount) / 1e18;
+        
+        if (refund > reserveBalance) return reserveBalance;
+        return refund;
+    }
+    
+    function getNewPrice(uint256 supply) internal pure returns (uint256) {
+        if (supply == 0) return 5e16;
+        uint256 tokensInUnits = supply / 1e18;
+        return 5e16 + (tokensInUnits * 1e13);
+    }
+    
     function buyTokens(uint256 amount) external payable {
         require(isForSale, "Token is not for sale");
         require(amount > 0, "Amount must be greater than 0");
         require(balanceOf[address(this)] >= amount, "Not enough tokens available");
         
-        uint256 totalPrice = (amount * pricePerToken) / (10**decimals);
+        uint256 totalPrice = getBuyPrice(amount);
         require(msg.value >= totalPrice, "Insufficient payment");
         
         balanceOf[address(this)] -= amount;
         balanceOf[msg.sender] += amount;
+        soldSupply += amount;
+        reserveBalance += totalPrice;
         
         if (msg.value > totalPrice) {
-            payable(msg.sender).transfer(msg.value - totalPrice);
+            (bool success, ) = payable(msg.sender).call{value: msg.value - totalPrice}("");
+            require(success, "Refund failed");
         }
         
         emit Transfer(address(this), msg.sender, amount);
-        emit TokenPurchased(msg.sender, amount, totalPrice);
-    }
-    
-    function setPrice(uint256 _pricePerToken) external onlyCreator {
-        pricePerToken = _pricePerToken;
-        emit PriceUpdated(_pricePerToken);
-    }
-    
-    function setSaleStatus(bool _isForSale) external onlyCreator {
-        isForSale = _isForSale;
-        emit SaleStatusChanged(_isForSale);
-    }
-    
-    function withdrawUnsoldTokens(uint256 amount) external onlyCreator {
-        require(balanceOf[address(this)] >= amount, "Not enough tokens in contract");
-        
-        balanceOf[address(this)] -= amount;
-        balanceOf[creator] += amount;
-        
-        emit Transfer(address(this), creator, amount);
-    }
-    
-    function getAvailableTokens() external view returns (uint256) {
-        return balanceOf[address(this)];
+        emit TokenPurchased(msg.sender, amount, totalPrice, getCurrentPrice());
     }
     
     function sellTokens(uint256 amount) external {
         require(amount > 0, "Amount must be greater than 0");
         require(balanceOf[msg.sender] >= amount, "Insufficient token balance");
         require(isForSale, "Token sales are disabled");
+        require(soldSupply >= amount, "Cannot sell more than sold supply");
         
-        uint256 totalPrice = (amount * pricePerToken) / (10**decimals);
-        
-        require(address(this).balance >= totalPrice, "Contract has insufficient TEST balance");
+        uint256 totalPrice = getSellPrice(amount);
+        require(reserveBalance >= totalPrice, "Insufficient reserve balance");
         
         balanceOf[msg.sender] -= amount;
         balanceOf[address(this)] += amount;
+        soldSupply -= amount;
+        reserveBalance -= totalPrice;
         
-        payable(msg.sender).transfer(totalPrice);
+        (bool success, ) = payable(msg.sender).call{value: totalPrice}("");
+        require(success, "Transfer failed");
         
         emit Transfer(msg.sender, address(this), amount);
-        emit TokenSold(msg.sender, amount, totalPrice);
+        emit TokenSold(msg.sender, amount, totalPrice, getCurrentPrice());
+    }
+    
+    function setSaleStatus(bool _isForSale) external onlyCreator {
+        isForSale = _isForSale;
+    }
+    
+    function getAvailableTokens() external view returns (uint256) {
+        return balanceOf[address(this)];
+    }
+    
+    function totalSupply() external pure returns (uint256) {
+        return TOTAL_SUPPLY;
     }
     
     function getContractBalance() external view returns (uint256) {
-        return address(this).balance;
+        return reserveBalance;
+    }
+    
+    function getBondingProgress() external view returns (uint256) {
+        return (soldSupply * 100) / TOTAL_SUPPLY;
     }
     
     function transfer(address to, uint256 amount) external returns (bool) {
