@@ -1,6 +1,3 @@
-<<<<<<< Updated upstream
-import './globals.css'
-=======
 import type { Metadata } from "next";
 import { Space_Grotesk } from 'next/font/google'
 import "./globals.css";
@@ -11,7 +8,6 @@ export const metadata: Metadata = {
   title: "Oasis Astra - Token Creator",
   description: "Create and deploy ERC20 tokens on Oasis Sapphire",
 };
->>>>>>> Stashed changes
 
 export default function RootLayout({
   children,
@@ -20,11 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-<<<<<<< Updated upstream
-      <body>
-=======
       <body className={`${spaceGrotesk.className} bg-pump-bg text-pump-text min-h-screen`}>
->>>>>>> Stashed changes
         {children}
       </body>
     </html>

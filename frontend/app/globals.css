@@ -4,38 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
-<<<<<<< Updated upstream
-/* Custom styles */
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-=======
->>>>>>> Stashed changes
 * {
   box-sizing: border-box;
 }
 
-<<<<<<< Updated upstream
-/* Ensure Tailwind classes work */
-.bg-gradient-to-br {
-  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
-}
-
-.from-purple-50 {
-  --tw-gradient-from: #faf5ff;
-  --tw-gradient-to: rgb(250 245 255 / 0);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
-.to-indigo-50 {
-  --tw-gradient-to: #eef2ff;
-}
-=======
 body {
   background-color: #10141f;
   color: #e2e8f0;
@@ -108,4 +80,3 @@ table.table-fixed td {
   overflow: hidden;
   text-overflow: ellipsis;
 }
->>>>>>> Stashed changes
