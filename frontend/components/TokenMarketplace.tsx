@@ -1,21 +1,15 @@
 'use client'
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
-import { BrowserProvider, Contract, formatEther, parseEther } from 'ethers'
+import { BrowserProvider, Contract, formatEther } from 'ethers'
 import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime'
-import { TOKEN_ABI, FACTORY_ABI, FACTORY_ADDRESS } from '../abi/factoryAbi'
+import { TOKEN_ABI } from '../abi/factoryAbi'
 import TokenTrader from './TokenTrader'
 
 declare global {
   interface Window {
     ethereum?: any
   }
-}
-
-interface TokenInfo {
-  name: string
-  symbol: string
-  decimals: number
 }
 
 interface TokenMarketplaceProps {
@@ -26,13 +20,10 @@ interface TokenMarketplaceProps {
 
 const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, address, createdTokens }, ref) => {
   const [availableTokens, setAvailableTokens] = useState<any[]>([])
-  const [tokenInfos, setTokenInfos] = useState<{ [address: string]: TokenInfo }>({})
-  const [userBalances, setUserBalances] = useState<{ [address: string]: bigint }>({})
   const [loading, setLoading] = useState(false)
   const [selectedToken, setSelectedToken] = useState<any>(null)
   const [showTrader, setShowTrader] = useState(false)
 
-  // Expose refresh function to parent
   useImperativeHandle(ref, () => ({
     refreshTokens: () => {
       loadAvailableTokens()
@@ -40,79 +31,67 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
   }))
 
   useEffect(() => {
-    if (connected && FACTORY_ADDRESS) {
+    if (connected) {
       loadAvailableTokens()
     }
   }, [connected, address, createdTokens])
 
-  // Load all available tokens from TokenFactory
   const loadAvailableTokens = async () => {
-    if (!FACTORY_ADDRESS) return
-
+    setLoading(true)
     try {
-      const provider = await getProvider()
-      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider)
+      // Load tokens from database
+      const response = await fetch('/api/tokens')
+      const data = await response.json()
 
-      // Get all tokens from factory
-      const allTokens = await factory.getAllTokens()
-      console.log('All tokens from factory:', allTokens)
+      if (data.success && data.data) {
+        const provider = await getProvider()
 
-      // Load additional info for each token
-      const tokensWithInfo = []
-      for (const tokenData of allTokens) {
-        console.log('Processing token:', tokenData)
+        const tokensWithInfo = []
+        for (const tokenData of data.data) {
+          const tokenContract = new Contract(tokenData.contract_address, TOKEN_ABI, provider)
 
-        const tokenContract = new Contract(tokenData.tokenAddress, TOKEN_ABI, provider)
+          try {
+            const [isForSale, availableAmount, currentPrice, contractBalance, userBalance, bondingProgress, soldSupply] = await Promise.all([
+              tokenContract.isForSale(),
+              tokenContract.getAvailableTokens(),
+              tokenContract.getCurrentPrice(),
+              tokenContract.getContractBalance(),
+              connected && address ? tokenContract.balanceOf(address) : Promise.resolve(BigInt(0)),
+              tokenContract.getBondingProgress(),
+              tokenContract.soldSupply()
+            ])
 
-        try {
-          const [isForSale, availableAmount, pricePerToken, contractBalance, userBalance] = await Promise.all([
-            tokenContract.isForSale(),
-            tokenContract.getAvailableTokens(),
-            tokenContract.pricePerToken(),
-            tokenContract.getContractBalance(),
-            connected && address ? tokenContract.balanceOf(address) : Promise.resolve(BigInt(0))
-          ])
-
-          console.log('Token info:', {
-            address: tokenData.tokenAddress,
-            isForSale,
-            availableAmount: availableAmount.toString(),
-            pricePerToken: pricePerToken.toString(),
-            contractBalance: contractBalance.toString(),
-            userBalance: userBalance.toString()
-          })
-
-          if (isForSale) {
-            tokensWithInfo.push({
-              tokenAddress: tokenData.tokenAddress,
-              name: tokenData.name,
-              symbol: tokenData.symbol,
-              totalSupply: tokenData.totalSupply,
-              creator: tokenData.creator,
-              isForSale,
-              availableAmount,
-              pricePerToken,
-              contractBalance,
-              userBalance
-            })
-
-            // Store user balance
-            if (connected && address) {
-              setUserBalances(prev => ({ ...prev, [tokenData.tokenAddress]: userBalance }))
+            if (isForSale) {
+              tokensWithInfo.push({
+                tokenAddress: tokenData.contract_address,
+                name: tokenData.name,
+                symbol: tokenData.symbol,
+                description: tokenData.description || '',
+                imageUrl: tokenData.image_url || '',
+                socialLink: tokenData.social_link || '',
+                totalSupply: tokenData.total_supply,
+                creator: tokenData.owner,
+                createdAt: tokenData.created_at,
+                isForSale,
+                availableAmount,
+                currentPrice,
+                contractBalance,
+                userBalance,
+                bondingProgress: Number(bondingProgress),
+                soldSupply
+              })
             }
-
-            // Load token info for display
-            await getTokenInfo(tokenData.tokenAddress)
+          } catch (error) {
+            console.error('Error loading token info for', tokenData.contract_address, error)
           }
-        } catch (error) {
-          console.error('Error loading token info for', tokenData.tokenAddress, error)
         }
-      }
 
-      console.log('Tokens with info:', tokensWithInfo)
-      setAvailableTokens(tokensWithInfo)
+        setAvailableTokens(tokensWithInfo)
+      }
     } catch (error) {
-      console.error('Error loading available tokens:', error)
+      console.error('Error loading tokens from database:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -125,182 +104,11 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
     return new BrowserProvider(wrappedProvider)
   }
 
-  const getTokenInfo = async (tokenAddress: string): Promise<TokenInfo> => {
-    if (tokenInfos[tokenAddress]) {
-      return tokenInfos[tokenAddress]
-    }
-
-    try {
-      const provider = await getProvider()
-      const token = new Contract(tokenAddress, TOKEN_ABI, provider)
-
-      const [name, symbol, decimals] = await Promise.all([
-        token.name(),
-        token.symbol(),
-        token.decimals()
-      ])
-
-      const info = { name, symbol, decimals: Number(decimals) }
-      setTokenInfos(prev => ({ ...prev, [tokenAddress]: info }))
-      return info
-    } catch (error) {
-      console.error('Error getting token info:', error)
-      return { name: 'Unknown', symbol: 'UNK', decimals: 18 }
-    }
-  }
-
-  const buyTokenDirect = async (tokenAddress: string, amount: string, pricePerToken: bigint) => {
-    if (!amount || parseFloat(amount) <= 0) {
-      alert('❌ Vui lòng nhập số lượng hợp lệ!')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const provider = await getProvider()
-      const signer = await provider.getSigner()
-      const tokenContract = new Contract(tokenAddress, TOKEN_ABI, signer)
-
-      const amountToBuy = parseEther(amount)
-      const totalPrice = (amountToBuy * pricePerToken) / parseEther('1')
-
-      console.log('Buying token directly...', {
-        tokenAddress,
-        amount: amountToBuy.toString(),
-        pricePerToken: pricePerToken.toString(),
-        totalPrice: totalPrice.toString()
-      })
-
-      const buyTx = await tokenContract.buyTokens(amountToBuy, { value: totalPrice })
-      const receipt = await buyTx.wait()
-
-      console.log('Token bought successfully:', receipt.hash)
-      alert(`✅ Mua ${amount} tokens thành công!\nTx: ${receipt.hash}`)
-
-      // Save purchase to database
-      try {
-        // First, get token_id from contract address
-        const tokenResponse = await fetch(`/api/tokens/by-address?contract_address=${tokenAddress}`)
-        const tokenData = await tokenResponse.json()
-
-        if (tokenData.success && tokenData.token_id) {
-          const response = await fetch('/api/purchases', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token_id: tokenData.token_id,
-              buyer_address: address,
-              seller_address: null,
-              quantity: amount,
-              price_per_token: formatEther(pricePerToken),
-              total_price: formatEther(totalPrice),
-              transaction_hash: receipt.hash,
-              status: 'completed',
-            }),
-          })
-
-          if (response.ok) {
-            const data = await response.json()
-            console.log('Purchase saved to database:', data)
-          } else {
-            const error = await response.json()
-            console.warn('Failed to save purchase to database:', error)
-          }
-        } else {
-          console.warn('Could not find token ID for contract:', tokenAddress)
-        }
-      } catch (dbError) {
-        console.warn('Error saving purchase to database:', dbError)
-      }
-
-      // Clear input
-      const input = document.getElementById(`buy-amount-${tokenAddress}`) as HTMLInputElement
-      if (input) input.value = ''
-
-      await loadAvailableTokens()
-
-    } catch (error: any) {
-      console.error('Error buying token:', error)
-      if (error.message.includes('insufficient funds')) {
-        alert('❌ Không đủ TEST token để mua!')
-      } else if (error.message.includes('Not enough tokens available')) {
-        alert('❌ Không đủ token có sẵn!')
-      } else if (error.message.includes('Token is not for sale')) {
-        alert('❌ Token này hiện không bán!')
-      } else if (error.message.includes('user rejected')) {
-        alert('❌ Bạn đã từ chối transaction!')
-      } else {
-        alert(`❌ Lỗi mua token: ${error.message || error}`)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const sellTokenDirect = async (tokenAddress: string, amount: string) => {
-    if (!amount || parseFloat(amount) <= 0) {
-      alert('❌ Vui lòng nhập số lượng hợp lệ!')
-      return
-    }
-
-    setLoading(true)
-    try {
-      const provider = await getProvider()
-      const signer = await provider.getSigner()
-      const tokenContract = new Contract(tokenAddress, TOKEN_ABI, signer)
-
-      const amountToSell = parseEther(amount)
-
-      console.log('Selling token directly...', {
-        tokenAddress,
-        amount: amountToSell.toString()
-      })
-
-      const sellTx = await tokenContract.sellTokens(amountToSell)
-      const receipt = await sellTx.wait()
-
-      console.log('Token sold successfully:', receipt.hash)
-      alert(`✅ Bán ${amount} tokens thành công!\nTx: ${receipt.hash}`)
-
-      // Clear input
-      const input = document.getElementById(`sell-amount-${tokenAddress}`) as HTMLInputElement
-      if (input) input.value = ''
-
-      await loadAvailableTokens()
-
-    } catch (error: any) {
-      console.error('Error selling token:', error)
-      if (error.message.includes('Insufficient token balance')) {
-        alert('❌ Không đủ token để bán!')
-      } else if (error.message.includes('Contract has insufficient TEST balance')) {
-        alert('❌ Contract không đủ TEST để mua lại!')
-      } else if (error.message.includes('Token sales are disabled')) {
-        alert('❌ Token này hiện không cho phép bán!')
-      } else if (error.message.includes('user rejected')) {
-        alert('❌ Bạn đã từ chối transaction!')
-      } else {
-        alert(`❌ Lỗi bán token: ${error.message || error}`)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
   if (!connected) {
     return (
-      <div className="text-center py-8" style={{ textAlign: 'center', padding: '2rem 0' }}>
-        <p className="text-gray-600" style={{ color: '#4b5563' }}>
-          Vui lòng kết nối ví để sử dụng token trading
-        </p>
-      </div>
-    )
-  }
-
-  if (!FACTORY_ADDRESS) {
-    return (
-      <div className="text-center py-8" style={{ textAlign: 'center', padding: '2rem 0' }}>
-        <p className="text-red-600" style={{ color: '#dc2626' }}>
-          Factory chưa được deploy. Vui lòng deploy factory trước.
+      <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+        <p style={{ color: '#9ca3af', fontSize: '1.1rem' }}>
+          Connect your wallet to start trading
         </p>
       </div>
     )
@@ -324,40 +132,49 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
             fontWeight: 'bold',
             color: '#fff',
             marginBottom: '0.5rem'
-          }}>Token Trading</h2>
+          }}>Token Board</h2>
           <p style={{ color: '#9ca3af', fontSize: '0.95rem' }}>
-            Discover và trade tokens - Pump your portfolio 🚀
+            Discover and trade tokens with bonding curve pricing 🚀
           </p>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fff' }}>
-            Trending Tokens ({availableTokens.length})
+            All Tokens ({availableTokens.length})
           </h3>
           <button
             onClick={loadAvailableTokens}
+            disabled={loading}
             style={{
               padding: '0.5rem 1rem',
-              background: 'rgba(139, 92, 246, 0.2)',
-              color: '#a78bfa',
+              background: loading ? 'rgba(75, 85, 99, 0.5)' : 'rgba(139, 92, 246, 0.2)',
+              color: loading ? '#6b7280' : '#a78bfa',
               borderRadius: '0.5rem',
               border: '1px solid rgba(139, 92, 246, 0.3)',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s',
               fontWeight: '500'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
+              if (!loading) e.currentTarget.style.background = 'rgba(139, 92, 246, 0.3)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
+              if (!loading) e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)';
             }}
           >
-            🔄 Refresh
+            {loading ? 'Loading...' : '🔄 Refresh'}
           </button>
         </div>
 
-        {availableTokens.length === 0 ? (
+        {loading && availableTokens.length === 0 ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '4rem 2rem',
+            color: '#9ca3af'
+          }}>
+            <p>Loading tokens...</p>
+          </div>
+        ) : availableTokens.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: '4rem 2rem',
@@ -367,13 +184,15 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
             color: '#9ca3af'
           }}>
             <h4 style={{ fontSize: '1.15rem', fontWeight: '500', marginBottom: '0.5rem', color: '#d1d5db' }}>
-              Chưa có token nào
+              No tokens yet
             </h4>
             <p style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
-              Hãy tạo token đầu tiên để bắt đầu giao dịch!
+              Create the first token to start trading!
             </p>
             <button
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
               style={{
                 padding: '0.75rem 1.5rem',
                 background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
@@ -384,27 +203,20 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
                 fontWeight: '600',
                 transition: 'all 0.2s'
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 6px 12px rgba(139, 92, 246, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = 'none';
-              }}
             >
-              Tạo Token Ngay
+              Create Token Now
             </button>
           </div>
         ) : (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-            gap: '1.5rem'
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            maxWidth: '800px',
+            margin: '0 auto'
           }}>
             {availableTokens.map((token) => {
-              const tokenInfo = tokenInfos[token.tokenAddress]
-              const userBalance = userBalances[token.tokenAddress] || BigInt(0)
-              const marketCap = (parseFloat(formatEther(token.contractBalance)) * parseFloat(formatEther(token.pricePerToken))).toFixed(2)
-              const bondingProgress = Math.min(90, Math.floor(Math.random() * 90) + 10) // Mock bonding progress
+              const marketCap = parseFloat(formatEther(token.contractBalance)).toFixed(2)
 
               return (
                 <div
@@ -414,9 +226,9 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
                     setShowTrader(true)
                   }}
                   style={{
-                    background: 'rgba(17, 24, 39, 0.6)',
-                    border: '1px solid rgba(139, 92, 246, 0.2)',
-                    borderRadius: '0.75rem',
+                    background: 'rgba(17, 24, 39, 0.8)',
+                    border: '1px solid rgba(75, 85, 99, 0.3)',
+                    borderRadius: '1rem',
                     overflow: 'hidden',
                     transition: 'all 0.2s',
                     cursor: 'pointer',
@@ -424,132 +236,163 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)';
-                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(139, 92, 246, 0.2)';
-                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)';
-                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = 'rgba(75, 85, 99, 0.3)';
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  {/* Token Header with Image */}
+                  {/* Image Section */}
                   <div style={{
-                    height: '120px',
-                    background: `linear-gradient(135deg, ${['#8b5cf6', '#7c3aed', '#6d28d9'][Math.floor(Math.random() * 3)]}, ${['#7c3aed', '#6d28d9', '#5b21b6'][Math.floor(Math.random() * 3)]})`,
+                    width: '100%',
+                    height: '400px',
+                    background: token.imageUrl
+                      ? `url(${token.imageUrl}) center/cover`
+                      : 'linear-gradient(135deg, #374151, #1f2937)',
+                    position: 'relative',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative'
+                    justifyContent: 'center'
                   }}>
+                    {!token.imageUrl && (
+                      <div style={{
+                        fontSize: '6rem',
+                        fontWeight: 'bold',
+                        color: 'rgba(255, 255, 255, 0.3)',
+                      }}>
+                        {token.symbol[0]}
+                      </div>
+                    )}
+                    {/* Market Cap Badge */}
                     <div style={{
-                      fontSize: '3rem',
-                      fontWeight: 'bold',
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      opacity: 0.9
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      background: 'rgba(34, 197, 94, 0.9)',
+                      color: '#fff',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '0.5rem',
+                      fontWeight: '700',
+                      fontSize: '1rem'
                     }}>
-                      {(tokenInfo?.symbol || token.symbol)[0]}
+                      ${marketCap}
                     </div>
                   </div>
 
-                  {/* Token Body */}
-                  <div style={{ padding: '1rem' }}>
-                    {/* Creator Info */}
-                    <div style={{
-                      fontSize: '0.75rem',
-                      color: '#9ca3af',
-                      marginBottom: '0.5rem',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <span>Created by {token.creator ? `${token.creator.slice(0, 6)}...${token.creator.slice(-2)}` : 'Unknown'}</span>
-                      <span style={{ color: '#22c55e', fontWeight: '600' }}>MC: ${marketCap}</span>
+                  {/* Info Section */}
+                  <div style={{ padding: '1.5rem' }}>
+                    {/* Title and Symbol */}
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <h3 style={{
+                        fontSize: '1.75rem',
+                        fontWeight: '700',
+                        color: '#fff',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {token.name}
+                      </h3>
+                      <p style={{
+                        fontSize: '1rem',
+                        color: '#9ca3af'
+                      }}>
+                        {token.symbol}
+                      </p>
                     </div>
-
-                    {/* Token Info */}
-                    <h3 style={{
-                      fontSize: '1.1rem',
-                      fontWeight: '700',
-                      color: '#fff',
-                      marginBottom: '0.25rem',
-                      lineHeight: 1.2
-                    }}>
-                      {tokenInfo?.name || token.name}
-                    </h3>
-
-                    <p style={{
-                      fontSize: '0.9rem',
-                      color: '#a78bfa',
-                      fontWeight: '600',
-                      marginBottom: '0.5rem'
-                    }}>
-                      ${tokenInfo?.symbol || token.symbol}
-                    </p>
 
                     {/* Description */}
                     <p style={{
-                      fontSize: '0.8rem',
-                      color: '#9ca3af',
-                      marginBottom: '0.75rem',
-                      lineHeight: 1.4,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
+                      fontSize: '0.95rem',
+                      color: '#d1d5db',
+                      marginBottom: '1rem',
+                      lineHeight: 1.5
                     }}>
-                      The most decentralized token on the Sapphire Network scaling...
+                      {token.description || 'No description'}
                     </p>
 
                     {/* Bonding Curve */}
-                    <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ marginBottom: '1rem' }}>
                       <div style={{
-                        fontSize: '0.75rem',
-                        color: '#9ca3af',
-                        marginBottom: '0.25rem',
                         display: 'flex',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '0.5rem'
                       }}>
-                        <span>BONDING CURVE PROGRESS</span>
-                        <span style={{ color: '#fff', fontWeight: '600' }}>{bondingProgress}%</span>
+                        <span style={{
+                          fontSize: '0.85rem',
+                          color: '#6b7280',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          BONDING CURVE
+                        </span>
+                        <span style={{
+                          fontSize: '0.95rem',
+                          color: '#fff',
+                          fontWeight: '600'
+                        }}>
+                          {token.bondingProgress}%
+                        </span>
                       </div>
                       <div style={{
                         width: '100%',
-                        height: '6px',
+                        height: '8px',
                         background: 'rgba(75, 85, 99, 0.3)',
-                        borderRadius: '3px',
+                        borderRadius: '4px',
                         overflow: 'hidden'
                       }}>
                         <div style={{
                           height: '100%',
-                          width: `${bondingProgress}%`,
-                          background: 'linear-gradient(90deg, #22c55e, #84cc16)',
-                          borderRadius: '3px',
+                          width: `${token.bondingProgress}%`,
+                          background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
+                          borderRadius: '4px',
                           transition: 'width 0.3s'
                         }}></div>
                       </div>
-                      <div style={{
-                        fontSize: '0.75rem',
-                        color: '#6b7280',
-                        marginTop: '0.25rem'
-                      }}>
-                        There are {formatEther(token.availableAmount).slice(0, 6)} A in the bonding curve
-                      </div>
                     </div>
 
-                    {/* Replies and Price */}
+                    {/* Footer */}
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      fontSize: '0.8rem',
-                      color: '#9ca3af',
-                      borderTop: '1px solid rgba(139, 92, 246, 0.2)',
-                      paddingTop: '0.75rem'
+                      fontSize: '0.85rem',
+                      color: '#6b7280'
                     }}>
-                      <span>📝 {Math.floor(Math.random() * 200)} replies</span>
-                      <span style={{ color: '#22c55e', fontWeight: '600' }}>Price: {formatEther(token.pricePerToken).slice(0, 8)} TEST</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>💬 0</span>
+                      </div>
+                      <div>
+                        Created by {token.creator.slice(0, 4)}...{token.creator.slice(-4)}
+                      </div>
                     </div>
+
+                    {/* Social Link */}
+                    {token.socialLink && (
+                      <div style={{
+                        marginTop: '0.75rem',
+                        paddingTop: '0.75rem',
+                        borderTop: '1px solid rgba(75, 85, 99, 0.3)'
+                      }}>
+                        <a
+                          href={token.socialLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            color: '#60a5fa',
+                            textDecoration: 'none',
+                            fontSize: '0.9rem',
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          🔗 {token.socialLink}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -558,7 +401,6 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
         )}
       </div>
 
-      {/* Trading Modal */}
       {showTrader && selectedToken && (
         <div style={{
           position: 'fixed',
@@ -566,25 +408,31 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
+          background: 'rgba(0, 0, 0, 0.85)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          backdropFilter: 'blur(5px)'
-        }}>
+          backdropFilter: 'blur(8px)'
+        }}
+          onClick={() => {
+            setShowTrader(false)
+            setSelectedToken(null)
+          }}
+        >
           <div style={{
-            background: 'rgba(15, 23, 42, 0.95)',
+            background: 'rgba(15, 23, 42, 0.98)',
             borderRadius: '1rem',
             padding: '2rem',
-            maxWidth: '600px',
+            maxWidth: '700px',
             width: '90%',
             maxHeight: '90vh',
             overflow: 'auto',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
             position: 'relative'
-          }}>
-            {/* Close Button */}
+          }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => {
                 setShowTrader(false)
@@ -597,31 +445,37 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
                 background: 'rgba(139, 92, 246, 0.2)',
                 border: 'none',
                 color: '#a78bfa',
-                width: '2rem',
-                height: '2rem',
+                width: '2.5rem',
+                height: '2.5rem',
                 borderRadius: '0.5rem',
                 cursor: 'pointer',
                 fontSize: '1.5rem',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                fontWeight: 'bold'
               }}
             >
               ✕
             </button>
 
-            {/* Token Info Header */}
             <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{ color: '#fff', fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-                {tokenInfos[selectedToken.tokenAddress]?.name || selectedToken.name}
+              <h2 style={{ color: '#fff', fontSize: '1.75rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>
+                {selectedToken.name}
               </h2>
-              <p style={{ color: '#a78bfa' }}>
-                {tokenInfos[selectedToken.tokenAddress]?.symbol || selectedToken.symbol}
+              <p style={{ color: '#a78bfa', fontSize: '1.1rem', fontWeight: '600' }}>
+                ${selectedToken.symbol}
               </p>
             </div>
 
-            {/* BondingCurveTrader */}
-            <TokenTrader selectedToken={selectedToken} />
+            <TokenTrader
+              selectedToken={selectedToken}
+              onSuccess={() => {
+                loadAvailableTokens()
+                setShowTrader(false)
+                setSelectedToken(null)
+              }}
+            />
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 export const FACTORY_ABI = [
-  "function createToken(string memory _name, string memory _symbol, uint256 _totalSupply, string memory _metadataURI, uint256 _pricePerToken) returns (address)",
+  "function createToken(string memory _name, string memory _symbol, string memory _metadataURI) returns (address)",
   "function getTokenCount() view returns (uint256)",
   "function getTokensByCreator(address creator) view returns (address[])",
   "function getTokenInfo(uint256 index) view returns (tuple(address tokenAddress, string name, string symbol, uint256 totalSupply, string metadataURI, address creator, uint256 createdAt))",
@@ -20,22 +20,21 @@ export const TOKEN_ABI = [
   "function allowance(address owner, address spender) view returns (uint256)",
   "function metadataURI() view returns (string)",
   "function creator() view returns (address)",
-  "function pricePerToken() view returns (uint256)",
+  "function getCurrentPrice() view returns (uint256)",
+  "function getBuyPrice(uint256 amount) view returns (uint256)",
+  "function getSellPrice(uint256 amount) view returns (uint256)",
   "function isForSale() view returns (bool)",
   "function buyTokens(uint256 amount) payable",
   "function sellTokens(uint256 amount)",
-  "function setPrice(uint256 _pricePerToken)",
   "function setSaleStatus(bool _isForSale)",
-  "function withdrawUnsoldTokens(uint256 amount)",
   "function getAvailableTokens() view returns (uint256)",
   "function getContractBalance() view returns (uint256)",
+  "function getBondingProgress() view returns (uint256)",
+  "function soldSupply() view returns (uint256)",
   "event Transfer(address indexed from, address indexed to, uint256 value)",
   "event Approval(address indexed owner, address indexed spender, uint256 value)",
-  "event TokenPurchased(address indexed buyer, uint256 amount, uint256 totalPrice)",
-  "event TokenSold(address indexed seller, uint256 amount, uint256 totalPrice)",
-  "event PriceUpdated(uint256 newPrice)",
-  "event SaleStatusChanged(bool isForSale)"
+  "event TokenPurchased(address indexed buyer, uint256 amount, uint256 totalPrice, uint256 newPrice)",
+  "event TokenSold(address indexed seller, uint256 amount, uint256 totalPrice, uint256 newPrice)"
 ] as const;
 
-// TokenFactory deployed on Sapphire Testnet
-export const FACTORY_ADDRESS = "0x69406A09aDCE3A662166Ad33c5e432204e438A77";
+export const FACTORY_ADDRESS = "0x6cB2b6c1cf00B2f54f75f345A021669D78952Ee3";

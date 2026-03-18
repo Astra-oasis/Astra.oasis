@@ -1,689 +1,174 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Wallet,
-  Search,
-  LayoutGrid,
-  PlusCircle,
-  HelpCircle,
-  Menu,
-  X,
-  ChevronDown,
-  Settings,
-  LogOut,
-} from 'lucide-react';
+import { Wallet, Menu, Search, HelpCircle, LayoutGrid, PlusCircle, Tv, LifeBuoy, X, ChevronDown, Settings, LogOut } from 'lucide-react';
+import DolphinLogo from './DolphinLogo';
+import { ViewState } from '../types';
 
 interface HeaderProps {
+  onGoHome: () => void;
+  onGoCreate: () => void;
+  onGoLivestreams: () => void;
+  onGoSupport: () => void;
   onConnectWallet: () => void;
+  onDisconnectWallet?: () => void;
   walletConnected: boolean;
   walletAddress?: string;
-  activeTab: 'showMarketplace' | 'create' | 'bonding';
-  onChangeTab: (tab: 'showMarketplace' | 'create' | 'bonding') => void;
+  currentView: ViewState;
 }
 
 const Header: React.FC<HeaderProps> = ({
+  onGoHome,
+  onGoCreate,
+  onGoLivestreams,
+  onGoSupport,
   onConnectWallet,
+  onDisconnectWallet,
   walletConnected,
   walletAddress,
-  activeTab,
-  onChangeTab,
+  currentView
 }) => {
-
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [walletDropdownOpen, setWalletDropdownOpen] = useState(false);
-
-  const headerStyle: React.CSSProperties = {
-    position: 'sticky',
-    top: 0,
-    zIndex: 50,
-    width: '100%',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-    backgroundColor: 'rgba(11, 15, 25, 0.95)',
-    backdropFilter: 'blur(10px)',
-  };
-
-  const containerStyle: React.CSSProperties = {
-    maxWidth: '80rem',
-    margin: '0 auto',
-    paddingLeft: '1rem',
-    paddingRight: '1rem',
-  };
-
-  const headerRowStyle: React.CSSProperties = {
-    display: 'flex',
-    height: '64px',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  };
-
-  const leftDivStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '24px',
-  };
-
-  const logoWrapperStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    cursor: 'pointer',
-    opacity: 1,
-    transition: 'opacity 0.2s',
-  };
-
-  const logoBadgeStyle: React.CSSProperties = {
-    display: 'flex',
-    height: '40px',
-    width: '40px',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: '12px',
-    background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-    boxShadow: '0 4px 6px rgba(139, 92, 246, 0.3)',
-  };
-
-  const logoTextStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-  };
-
-  const logoTitleStyle: React.CSSProperties = {
-    fontSize: '18px',
-    fontWeight: 700,
-    color: '#fff',
-    lineHeight: 1,
-  };
-
-  const logoSubtitleStyle: React.CSSProperties = {
-    fontSize: '10px',
-    color: '#9ca3af',
-    fontFamily: 'monospace',
-  };
-
-  const navStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-  };
-
-  const navButtonBaseStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 500,
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  };
-
-  const searchContainerStyle: React.CSSProperties = {
-    display: 'flex',
-    flex: 1,
-    maxWidth: '448px',
-    marginLeft: '32px',
-    marginRight: '32px',
-  };
-
-  const searchWrapperStyle: React.CSSProperties = {
-    position: 'relative',
-    width: '100%',
-  };
-
-  const rightDivStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  };
-
-  const walletContainerStyle: React.CSSProperties = {
-    position: 'relative',
-    display: 'flex',
-  };
-
-  const mobileMenuButtonStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '8px',
-    borderRadius: '8px',
-    color: '#d1d5db',
-    backgroundColor: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  };
-
-  const mobileMenuStyle: React.CSSProperties = {
-    display: mobileMenuOpen ? 'block' : 'none',
-    paddingBottom: '16px',
-    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-  };
-
-  const mobileMenuListStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    paddingTop: '16px',
-    paddingBottom: '16px',
-  };
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
 
   return (
-    <header style={headerStyle}>
-      <div style={containerStyle}>
-        <div style={headerRowStyle}>
-          {/* LEFT */}
-          <div style={leftDivStyle}>
-            {/* LOGO */}
-            <div
-              style={logoWrapperStyle}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-            >
-              <div style={logoBadgeStyle}>
-                <span style={{ fontSize: '18px', fontWeight: 900, color: '#fff' }}>◆</span>
-              </div>
-
-              <div style={logoTextStyle}>
-                <span style={logoTitleStyle}>Oasis Astra</span>
-                <span style={logoSubtitleStyle}>Sapphire Network</span>
-              </div>
+    <header className="sticky top-0 z-50 w-full border-b border-gray-800 bg-pump-bg/95 backdrop-blur supports-[backdrop-filter]:bg-pump-bg/60">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        {/* Logo Section */}
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={onGoHome}>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
+              <DolphinLogo size={32} />
             </div>
-
-            {/* NAV DESKTOP */}
-            <nav style={navStyle}>
-              <button
-                onClick={() => onChangeTab('showMarketplace')}
-                style={{
-                  ...navButtonBaseStyle,
-                  color: activeTab === 'showMarketplace' ? '#fff' : '#d1d5db',
-                  backgroundColor:
-                    activeTab === 'showMarketplace'
-                      ? 'rgba(139, 92, 246, 0.15)'
-                      : 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.15)';
-                }}
-              >
-                <LayoutGrid style={{ width: '16px', height: '16px' }} />
-                Board
-              </button>
-
-              <button
-                onClick={() => onChangeTab('create')}
-                style={{
-                  ...navButtonBaseStyle,
-                  color: activeTab === 'create' ? '#fff' : '#d1d5db',
-                  backgroundColor:
-                    activeTab === 'create'
-                      ? 'rgba(139, 92, 246, 0.15)'
-                      : 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'create') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                    e.currentTarget.style.color = '#fff';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'create') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#d1d5db';
-                  }
-                }}
-              >
-                <PlusCircle style={{ width: '16px', height: '16px' }} />
-                Create Token
-              </button>
-
-              <button
-                onClick={() => onChangeTab('bonding')}
-                style={{
-                  ...navButtonBaseStyle,
-                  color: activeTab === 'bonding' ? '#fff' : '#d1d5db',
-                  backgroundColor:
-                    activeTab === 'bonding'
-                      ? 'rgba(139, 92, 246, 0.15)'
-                      : 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'bonding') {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                    e.currentTarget.style.color = '#fff';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'bonding') {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#d1d5db';
-                  }
-                }}
-              >
-                <span>🔄</span>
-                Trading
-              </button>
-
-
-              <button
-                style={{
-                  ...navButtonBaseStyle,
-                  color: '#d1d5db',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.color = '#fff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#d1d5db';
-                }}
-              >
-                <HelpCircle style={{ width: '16px', height: '16px' }} />
-                Docs
-              </button>
-            </nav>
-          </div>
-
-          {/* CENTER SEARCH */}
-          <div style={searchContainerStyle}>
-            <div style={searchWrapperStyle}>
-              <Search
-                style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '12px',
-                  width: '16px',
-                  height: '16px',
-                  color: '#6b7280',
-                }}
-              />
-
-              <input
-                type="search"
-                placeholder="Search tokens..."
-                style={{
-                  width: '100%',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(17, 24, 39, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  paddingTop: '8px',
-                  paddingBottom: '8px',
-                  paddingLeft: '40px',
-                  paddingRight: '16px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  color: '#fff',
-                  transition: 'all 0.2s',
-                } as React.CSSProperties}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#8b5cf6';
-                  e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 1)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 0.8)';
-                }}
-              />
+            <div className="hidden sm:flex flex-col">
+              <span className="text-lg font-bold tracking-tight text-white leading-none">
+                Oasis Astra
+              </span>
+              <span className="text-[10px] text-gray-400 font-mono">Sapphire Protocol</span>
             </div>
           </div>
 
-          {/* RIGHT */}
-          <div style={rightDivStyle}>
-            {/* WALLET BUTTON */}
-            <div style={walletContainerStyle}>
-              <button
-                onClick={() => {
-                  if (walletConnected) {
-                    setWalletDropdownOpen(!walletDropdownOpen);
-                  } else {
-                    onConnectWallet();
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  borderRadius: '8px',
-                  paddingLeft: '16px',
-                  paddingRight: '16px',
-                  paddingTop: '8px',
-                  paddingBottom: '8px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                  boxShadow: '0 4px 6px rgba(139, 92, 246, 0.3)',
-                  transition: 'all 0.2s',
-                } as React.CSSProperties}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 6px 12px rgba(139, 92, 246, 0.5)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 6px rgba(139, 92, 246, 0.3)';
-                }}
-              >
-                <Wallet style={{ width: '16px', height: '16px' }} />
-
-                {walletConnected ? (
-                  <>
-                    <span style={{ fontSize: '12px' }}>
-                      {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
-                    </span>
-                    <ChevronDown style={{ width: '16px', height: '16px' }} />
-                  </>
-                ) : (
-                  'Connect Wallet'
-                )}
-              </button>
-
-              {/* WALLET DROPDOWN */}
-              {walletConnected && walletDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: '8px',
-                    width: '192px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                    zIndex: 50,
-                    backdropFilter: 'blur(10px)',
-                  } as React.CSSProperties}
-                >
-                  <div
-                    style={{
-                      padding: '12px',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                    }}
-                  >
-                    <p style={{ fontSize: '12px', color: '#9ca3af' }}>Connected Wallet</p>
-                    <p
-                      style={{
-                        fontSize: '14px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        marginTop: '4px',
-                      }}
-                    >
-                      {walletAddress}
-                    </p>
-                  </div>
-
-                  <button
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      color: '#d1d5db',
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    } as React.CSSProperties}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#fff';
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#d1d5db';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <Settings style={{ width: '16px', height: '16px' }} />
-                    Settings
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setWalletDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px 16px',
-                      fontSize: '14px',
-                      color: '#f87171',
-                      backgroundColor: 'transparent',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                      cursor: 'pointer',
-                      borderRadius: '0 0 6px 6px',
-                      transition: 'all 0.2s',
-                    } as React.CSSProperties}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = '#fca5a5';
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = '#f87171';
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <LogOut style={{ width: '16px', height: '16px' }} />
-                    Disconnect
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* MOBILE MENU BUTTON */}
+          <nav className="hidden xl:flex items-center gap-6 text-sm font-medium">
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              style={mobileMenuButtonStyle}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                e.currentTarget.style.color = '#fff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = '#d1d5db';
-              }}
+              onClick={onGoHome}
+              className={`flex items-center gap-2 transition-colors ${currentView === ViewState.GRID || currentView === ViewState.DETAIL
+                  ? 'text-white font-bold'
+                  : 'text-gray-400 hover:text-white'
+                }`}
             >
-              {mobileMenuOpen ? (
-                <X style={{ width: '24px', height: '24px' }} />
-              ) : (
-                <Menu style={{ width: '24px', height: '24px' }} />
-              )}
+              <LayoutGrid className="w-4 h-4" /> Board
             </button>
+            <button
+              onClick={onGoLivestreams}
+              className={`flex items-center gap-2 transition-colors ${currentView === ViewState.LIVESTREAMS
+                  ? 'text-white font-bold'
+                  : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              <Tv className="w-4 h-4" /> Livestreams
+            </button>
+            <button
+              onClick={onGoCreate}
+              className={`flex items-center gap-2 transition-colors ${currentView === ViewState.CREATE
+                  ? 'text-white font-bold'
+                  : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              <PlusCircle className="w-4 h-4" /> Start Coin
+            </button>
+            <button
+              onClick={onGoSupport}
+              className={`flex items-center gap-2 transition-colors ${currentView === ViewState.SUPPORT
+                  ? 'text-white font-bold'
+                  : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              <LifeBuoy className="w-4 h-4" /> Support
+            </button>
+            <button className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
+              <HelpCircle className="w-4 h-4" /> Docs
+            </button>
+          </nav>
+        </div>
+
+        {/* Search */}
+        <div className="flex-1 max-w-md px-8 hidden lg:block">
+          <div className="relative group">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="search"
+              placeholder="Search tokens..."
+              className="w-full rounded-lg bg-pump-card border border-gray-800 py-2 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:bg-gray-900 transition-all text-white placeholder-gray-600"
+            />
           </div>
         </div>
 
-        {/* MOBILE MENU */}
-        {mobileMenuOpen && (
-          <div style={mobileMenuStyle}>
-            <div style={mobileMenuListStyle}>
-              {/* MOBILE SEARCH */}
-              <div style={{ paddingLeft: '8px', paddingRight: '8px', marginBottom: '8px' }}>
-                <div style={{ position: 'relative', width: '100%' }}>
-                  <Search
-                    style={{
-                      position: 'absolute',
-                      left: '12px',
-                      top: '12px',
-                      width: '16px',
-                      height: '16px',
-                      color: '#6b7280',
-                    }}
-                  />
-                  <input
-                    type="search"
-                    placeholder="Search tokens..."
-                    style={{
-                      width: '100%',
-                      borderRadius: '8px',
-                      backgroundColor: 'rgba(17, 24, 39, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      paddingTop: '8px',
-                      paddingBottom: '8px',
-                      paddingLeft: '40px',
-                      paddingRight: '16px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      color: '#fff',
-                      transition: 'all 0.2s',
-                    } as React.CSSProperties}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#8b5cf6';
-                      e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 1)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                      e.currentTarget.style.backgroundColor = 'rgba(17, 24, 39, 0.8)';
-                    }}
-                  />
+        {/* Wallet & Actions */}
+        <div className="flex items-center gap-3">
+          {!walletConnected ? (
+            <button
+              onClick={onConnectWallet}
+              className="flex items-center gap-2 bg-white hover:bg-gray-200 text-black px-4 py-2 rounded-lg text-sm font-bold transition-all active:scale-95"
+            >
+              <Wallet className="w-4 h-4" />
+              <span>Connect Wallet</span>
+            </button>
+          ) : (
+            <div className="relative">
+              <div className="flex items-center gap-3 cursor-pointer" onClick={() => setWalletMenuOpen(!walletMenuOpen)}>
+                <div className="hidden md:flex flex-col items-end mr-2">
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Connected</span>
+                  <span className="text-xs font-mono text-pump-green">{walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}</span>
                 </div>
+                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-pump-accent to-blue-500 border-2 border-gray-800 flex items-center justify-center text-white font-bold hover:scale-105 transition-transform">
+                  {walletAddress?.slice(2, 4).toUpperCase()}
+                </div>
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${walletMenuOpen ? 'rotate-180' : ''}`} />
               </div>
 
-              <button
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  paddingLeft: '16px',
-                  paddingRight: '16px',
-                  paddingTop: '8px',
-                  paddingBottom: '8px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: '#fff',
-                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                } as React.CSSProperties}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.15)';
-                }}
-              >
-                <LayoutGrid style={{ width: '16px', height: '16px' }} />
-                Board
-              </button>
-
-              <button
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  paddingLeft: '16px',
-                  paddingRight: '16px',
-                  paddingTop: '8px',
-                  paddingBottom: '8px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: '#d1d5db',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                } as React.CSSProperties}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.color = '#fff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#d1d5db';
-                }}
-              >
-                <PlusCircle style={{ width: '16px', height: '16px' }} />
-                Create Token
-              </button>
-
-              <button
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  paddingLeft: '16px',
-                  paddingRight: '16px',
-                  paddingTop: '8px',
-                  paddingBottom: '8px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: '#d1d5db',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                } as React.CSSProperties}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.color = '#fff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#d1d5db';
-                }}
-              >
-                <HelpCircle style={{ width: '16px', height: '16px' }} />
-                Docs
-              </button>
-
-              {/* MOBILE WALLET BUTTON */}
-              {!walletConnected && (
-                <button
-                  onClick={() => {
-                    onConnectWallet();
-                    setMobileMenuOpen(false);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    borderRadius: '8px',
-                    paddingLeft: '16px',
-                    paddingRight: '16px',
-                    paddingTop: '8px',
-                    paddingBottom: '8px',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: '#fff',
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                    boxShadow: '0 4px 6px rgba(139, 92, 246, 0.3)',
-                    width: '100%',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                  } as React.CSSProperties}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 6px 12px rgba(139, 92, 246, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(139, 92, 246, 0.3)';
-                  }}
-                >
-                  <Wallet style={{ width: '16px', height: '16px' }} />
-                  Connect Wallet
-                </button>
+              {/* Wallet Dropdown Menu */}
+              {walletMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-pump-card border border-gray-800 rounded-lg shadow-xl z-50 overflow-hidden">
+                  <div className="p-3 border-b border-gray-800">
+                    <div className="text-xs text-gray-500 mb-1">Connected Wallet</div>
+                    <div className="text-sm font-mono text-white break-all">{walletAddress}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (onDisconnectWallet) {
+                        onDisconnectWallet();
+                      }
+                      setWalletMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Disconnect Wallet</span>
+                  </button>
+                </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+
+          <button className="xl:hidden p-2 text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="xl:hidden bg-pump-bg border-b border-gray-800 p-4 animate-fade-in">
+          <nav className="flex flex-col gap-4">
+            <button onClick={() => { onGoHome(); setMobileMenuOpen(false); }} className="flex items-center gap-3 text-white font-bold"><LayoutGrid className="w-5 h-5" /> Board</button>
+            <button onClick={() => { onGoCreate(); setMobileMenuOpen(false); }} className="flex items-center gap-3 text-white font-bold"><PlusCircle className="w-5 h-5" /> Start Coin</button>
+            <button className="flex items-center gap-3 text-gray-400"><HelpCircle className="w-5 h-5" /> Docs</button>
+            {!walletConnected && (
+              <button onClick={() => { onConnectWallet(); setMobileMenuOpen(false); }} className="flex items-center gap-3 text-pump-green font-bold border border-pump-green/30 rounded-lg p-3 justify-center"><Wallet className="w-5 h-5" /> Connect Wallet</button>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };

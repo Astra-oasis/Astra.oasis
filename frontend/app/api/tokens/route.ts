@@ -4,7 +4,7 @@ import { query } from '@/lib/db';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { name, symbol, totalSupply, owner, contractAddress } = body;
+        const { name, symbol, description, image_url, social_link, totalSupply, owner, contractAddress } = body;
 
         if (!name || !symbol || !owner || !contractAddress) {
             return NextResponse.json(
@@ -14,10 +14,10 @@ export async function POST(request: NextRequest) {
         }
 
         const result = await query(
-            `INSERT INTO tokens (name, symbol, total_supply, owner, contract_address, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+            `INSERT INTO tokens (name, symbol, description, image_url, social_link, total_supply, owner, contract_address, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
        RETURNING *`,
-            [name, symbol, totalSupply || 0, owner, contractAddress]
+            [name, symbol, description || '', image_url || '', social_link || '', totalSupply || '1000000000', owner, contractAddress]
         );
 
         return NextResponse.json({

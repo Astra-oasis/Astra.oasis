@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { Space_Grotesk } from 'next/font/google'
 import "./globals.css";
+
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: "Oasis Astra - Token Creator",
@@ -13,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-pump-bg text-pump-text min-h-screen">
+      <body className={`${spaceGrotesk.className} bg-pump-bg text-pump-text min-h-screen`}>
         {children}
       </body>
     </html>

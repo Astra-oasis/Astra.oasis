@@ -6,6 +6,7 @@
     "dev": "cd frontend && npm run dev",
     "compile": "npx hardhat compile",
     "deploy-factory": "npx hardhat run scripts/deploy-factory.ts --network sapphire-testnet",
+    "test-bonding": "npx hardhat run test/test-bonding-curve.ts --network sapphire-testnet",
     "frontend:dev": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build",
     "clean": "npx hardhat clean",

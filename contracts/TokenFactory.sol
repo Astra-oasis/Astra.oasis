@@ -30,22 +30,16 @@ contract TokenFactory {
     function createToken(
         string memory _name,
         string memory _symbol,
-        uint256 _totalSupply,
-        string memory _metadataURI,
-        uint256 _pricePerToken
+        string memory _metadataURI
     ) external returns (address) {
         require(bytes(_name).length > 0, "Name cannot be empty");
         require(bytes(_symbol).length > 0, "Symbol cannot be empty");
-        require(_totalSupply > 0, "Total supply must be greater than 0");
-        require(_pricePerToken > 0, "Price per token must be greater than 0");
         
         TokenPolicyMint newToken = new TokenPolicyMint(
             _name,
             _symbol,
-            _totalSupply,
             _metadataURI,
-            msg.sender,
-            _pricePerToken
+            msg.sender
         );
         
         address tokenAddress = address(newToken);
@@ -54,7 +48,7 @@ contract TokenFactory {
             tokenAddress: tokenAddress,
             name: _name,
             symbol: _symbol,
-            totalSupply: _totalSupply,
+            totalSupply: 1_000_000_000 * 10**18,
             metadataURI: _metadataURI,
             creator: msg.sender,
             createdAt: block.timestamp
@@ -69,7 +63,7 @@ contract TokenFactory {
             msg.sender,
             _name,
             _symbol,
-            _totalSupply,
+            1_000_000_000 * 10**18,
             _metadataURI
         );
         
