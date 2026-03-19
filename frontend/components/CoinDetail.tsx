@@ -143,7 +143,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
                         <Sparkles className="text-pump-accent w-6 h-6 animate-pulse" />
                     </div>
                     <h3 className="text-xs font-black text-pump-accent uppercase tracking-widest mb-3 flex items-center gap-2">
-                        Astra AI Analysis
+                        Astra AI Analysiss
                     </h3>
                     {loadingAnalysis ? (
                         <div className="space-y-2 animate-pulse">
