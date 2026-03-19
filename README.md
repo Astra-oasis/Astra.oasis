@@ -1,6 +1,6 @@
 # astra.oasis
 
-A decentralized token creation and trading platform built on Oasis Sapphire Testnet with pump.fun-style mechanics.
+A decentralized token creation and trading platform built on Oasis Sapphire Testnet with pump.fun-style mechanics
 
 ## Overview
 
