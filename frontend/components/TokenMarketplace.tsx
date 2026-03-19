@@ -45,7 +45,7 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
 
       if (data.success && data.data) {
         const provider = await getProvider()
-        
+
         const tokensWithInfo = []
         for (const tokenData of data.data) {
           const tokenContract = new Contract(tokenData.contract_address, TOKEN_ABI, provider)
@@ -115,13 +115,12 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
   }
 
   return (
-    <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-8" style={{
-      maxWidth: '72rem',
-      margin: '2rem auto 0 auto',
-      background: 'white',
-      borderRadius: '0.75rem',
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-      padding: '2rem'
+    <div style={{
+      maxWidth: '100%',
+      margin: '2rem 0 0 0',
+      background: 'rgb(11, 15, 25)',
+      minHeight: '100vh',
+      padding: '2rem 1rem'
     }}>
       <div style={{
         maxWidth: '90rem',
@@ -195,9 +194,9 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
               style={{
-                padding: '0.5rem 1rem',
-                background: '#9333ea',
-                color: 'white',
+                padding: '0.75rem 1.5rem',
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color: '#fff',
                 borderRadius: '0.5rem',
                 border: 'none',
                 cursor: 'pointer',
@@ -248,7 +247,7 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
                   <div style={{
                     width: '100%',
                     height: '400px',
-                    background: token.imageUrl 
+                    background: token.imageUrl
                       ? `url(${token.imageUrl}) center/cover`
                       : 'linear-gradient(135deg, #374151, #1f2937)',
                     position: 'relative',
@@ -375,7 +374,7 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
                         paddingTop: '0.75rem',
                         borderTop: '1px solid rgba(75, 85, 99, 0.3)'
                       }}>
-                        <a 
+                        <a
                           href={token.socialLink}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -469,8 +468,8 @@ const TokenMarketplace = forwardRef<any, TokenMarketplaceProps>(({ connected, ad
               </p>
             </div>
 
-            <TokenTrader 
-              selectedToken={selectedToken} 
+            <TokenTrader
+              selectedToken={selectedToken}
               onSuccess={() => {
                 loadAvailableTokens()
                 setShowTrader(false)

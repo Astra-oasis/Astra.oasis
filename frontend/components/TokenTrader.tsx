@@ -155,7 +155,7 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
       const receipt = await buyTx.wait()
 
       console.log('Tokens bought successfully:', receipt.hash)
-      
+
       // Save to database
       await savePurchaseToDatabase('buy', receipt.hash, amount, formatEther(totalPrice))
 
@@ -163,7 +163,7 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
 
       setAmount('')
       await loadTokenData()
-      
+
       if (onSuccess) {
         onSuccess()
       }
@@ -209,7 +209,7 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
       const receipt = await sellTx.wait()
 
       console.log('Tokens sold successfully:', receipt.hash)
-      
+
       // Save to database
       await savePurchaseToDatabase('sell', receipt.hash, amount, formatEther(returnAmount))
 
@@ -217,7 +217,7 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
 
       setAmount('')
       await loadTokenData()
-      
+
       if (onSuccess) {
         onSuccess()
       }
@@ -383,17 +383,17 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
               <span style={{ color: '#9ca3af', fontSize: '0.9rem', fontWeight: '600' }}>
                 {activeTab === 'buy' ? 'You pay:' : 'You receive:'}
               </span>
-              <span style={{ 
-                color: activeTab === 'buy' ? '#22c55e' : '#ef4444', 
+              <span style={{
+                color: activeTab === 'buy' ? '#22c55e' : '#ef4444',
                 fontWeight: '700',
                 fontSize: '1.1rem'
               }}>
                 {parseFloat(estimatedCost).toFixed(6)} TEST
               </span>
             </div>
-            
-            <div style={{ 
-              fontSize: '0.8rem', 
+
+            <div style={{
+              fontSize: '0.8rem',
               color: '#6b7280',
               paddingTop: '0.5rem',
               borderTop: '1px solid rgba(107, 114, 128, 0.2)'
@@ -451,8 +451,8 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
           fontWeight: '700',
           cursor: loading || !amount || parseFloat(amount) <= 0 ? 'not-allowed' : 'pointer',
           transition: 'all 0.2s',
-          boxShadow: loading || !amount || parseFloat(amount) <= 0 
-            ? 'none' 
+          boxShadow: loading || !amount || parseFloat(amount) <= 0
+            ? 'none'
             : activeTab === 'buy'
               ? '0 4px 12px rgba(34, 197, 94, 0.3)'
               : '0 4px 12px rgba(239, 68, 68, 0.3)'
@@ -467,8 +467,8 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = loading || !amount || parseFloat(amount) <= 0 
-            ? 'none' 
+          e.currentTarget.style.boxShadow = loading || !amount || parseFloat(amount) <= 0
+            ? 'none'
             : activeTab === 'buy'
               ? '0 4px 12px rgba(34, 197, 94, 0.3)'
               : '0 4px 12px rgba(239, 68, 68, 0.3)';
@@ -485,7 +485,7 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
         border: '1px solid rgba(59, 130, 246, 0.2)'
       }}>
         <p style={{ fontSize: '0.8rem', color: '#9ca3af', lineHeight: 1.6 }}>
-          💡 Price is determined by bonding curve. The more tokens sold, the higher the price. 
+          💡 Price is determined by bonding curve. The more tokens sold, the higher the price.
           When you buy, price increases. When you sell, price decreases.
         </p>
       </div>

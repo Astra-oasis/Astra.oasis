@@ -1,0 +1,51 @@
+-- Create tokens table
+CREATE TABLE IF NOT EXISTS tokens (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  symbol VARCHAR(50) NOT NULL,
+  description TEXT,
+  image_url VARCHAR(255),
+  social_link VARCHAR(255),
+  total_supply BIGINT DEFAULT 0,
+  owner VARCHAR(255) NOT NULL,
+  contract_address VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create transactions table (for mint/transfer events)
+CREATE TABLE IF NOT EXISTS transactions (
+  id SERIAL PRIMARY KEY,
+  token_id INTEGER NOT NULL REFERENCES tokens(id) ON DELETE CASCADE,
+  from_address VARCHAR(255) NOT NULL,
+  to_address VARCHAR(255) NOT NULL,
+  amount BIGINT NOT NULL,
+  transaction_hash VARCHAR(255) UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create purchases table (for token buys/sells in marketplace)
+CREATE TABLE IF NOT EXISTS purchases (
+  id SERIAL PRIMARY KEY,
+  token_id INTEGER NOT NULL REFERENCES tokens(id) ON DELETE CASCADE,
+  buyer_address VARCHAR(255) NOT NULL,
+  seller_address VARCHAR(255),
+  quantity BIGINT NOT NULL,
+  price_per_token NUMERIC(36, 18) NOT NULL,
+  total_price NUMERIC(36, 18) NOT NULL,
+  transaction_hash VARCHAR(255),
+  status VARCHAR(50) DEFAULT 'completed', -- completed, pending, failed
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner);
+CREATE INDEX IF NOT EXISTS idx_tokens_contract_address ON tokens(contract_address);
+CREATE INDEX IF NOT EXISTS idx_transactions_token_id ON transactions(token_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_from ON transactions(from_address);
+CREATE INDEX IF NOT EXISTS idx_transactions_to ON transactions(to_address);
+CREATE INDEX IF NOT EXISTS idx_purchases_token_id ON purchases(token_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_buyer ON purchases(buyer_address);
+CREATE INDEX IF NOT EXISTS idx_purchases_seller ON purchases(seller_address);
+

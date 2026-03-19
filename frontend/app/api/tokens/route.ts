@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
             `INSERT INTO tokens (name, symbol, description, image_url, social_link, total_supply, owner, contract_address, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
        RETURNING *`,
-            [name, symbol, description || '', image_url || '', social_link || '', totalSupply || '1000000000', owner, contractAddress]
+            [name, symbol, description || null, image_url || null, social_link || null, totalSupply || 0, owner, contractAddress]
         );
 
         return NextResponse.json({

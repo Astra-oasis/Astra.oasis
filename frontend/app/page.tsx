@@ -71,7 +71,7 @@ export default function Home() {
       const wrappedProvider = wrapEthereumProvider(ethereum);
       const provider = new BrowserProvider(wrappedProvider);
       const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
-      
+
       const tokens = await factory.getAllTokens();
       const formattedTokens: Coin[] = tokens.map((t: any, idx: number) => ({
         id: `real-${idx}`,
@@ -124,7 +124,7 @@ export default function Home() {
         if (accounts.length > 0) {
           setConnected(true);
           setAddress(accounts[0]);
-          addToast('success', 'Wallet Connected', `Connected to ${accounts[0].slice(0,6)}...`);
+          addToast('success', 'Wallet Connected', `Connected to ${accounts[0].slice(0, 6)}...`);
         }
       } catch (error) {
         addToast('error', 'Connection Failed', 'Failed to connect wallet.');
@@ -157,9 +157,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-pump-bg text-pump-text font-sans pb-20 relative">
-      <Header 
-        onGoHome={handleGoHome} 
-        onGoCreate={handleGoCreate} 
+      <Header
+        onGoHome={handleGoHome}
+        onGoCreate={handleGoCreate}
         onGoLivestreams={handleGoLivestreams}
         onGoSupport={handleGoSupport}
         onConnectWallet={handleConnectWallet}
@@ -168,46 +168,46 @@ export default function Home() {
         walletAddress={address}
         currentView={viewState}
       />
-      
+
       {/* Toast Container */}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-2 w-full max-w-sm pointer-events-none">
         {toasts.map((toast) => (
-            <Toast key={toast.id} toast={toast} onClose={removeToast} />
+          <Toast key={toast.id} toast={toast} onClose={removeToast} />
         ))}
       </div>
-      
+
       <main className="container mx-auto px-4 py-6">
         {viewState === ViewState.GRID && (
           <>
             <KingOfTheHill coin={sortedCoins[0]} onClick={handleCoinClick} />
-            
+
             <div className="mt-8">
-                <FilterBar currentSort={sortOption} onSortChange={setSortOption} />
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <FilterBar currentSort={sortOption} onSortChange={setSortOption} />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {sortedCoins.map((coin) => (
-                    <CoinCard 
-                      key={coin.id} 
-                      coin={coin} 
-                      onClick={handleCoinClick} 
-                    />
+                  <CoinCard
+                    key={coin.id}
+                    coin={coin}
+                    onClick={handleCoinClick}
+                  />
                 ))}
-                </div>
+              </div>
             </div>
           </>
         )}
 
         {viewState === ViewState.DETAIL && selectedCoin && (
-          <CoinDetail 
-            coin={selectedCoin} 
-            onBack={handleGoHome} 
-            showToast={addToast} 
+          <CoinDetail
+            coin={selectedCoin}
+            onBack={handleGoHome}
+            showToast={addToast}
           />
         )}
 
         {viewState === ViewState.CREATE && (
-          <CreateCoinPage 
-            onCancel={handleGoHome} 
+          <CreateCoinPage
+            onCancel={handleGoHome}
             onTokenCreated={(addr) => {
               addToast('success', 'Token Created', `Address: ${addr}`);
               fetchRealTokens();
