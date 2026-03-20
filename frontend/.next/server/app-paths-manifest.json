@@ -1,3 +1,9 @@
 {
-  "/page": "app/page.js"
+  "/api/upload/route": "app/api/upload/route.js",
+  "/page": "app/page.js",
+  "/api/transactions/route": "app/api/transactions/route.js",
+  "/api/tokens/route": "app/api/tokens/route.js",
+  "/api/tokens-images/route": "app/api/tokens-images/route.js",
+  "/api/trades/route": "app/api/trades/route.js",
+  "/api/comments/route": "app/api/comments/route.js"
 }

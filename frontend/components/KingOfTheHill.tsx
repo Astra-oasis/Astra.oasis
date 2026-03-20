@@ -9,6 +9,20 @@ interface KingOfTheHillProps {
 }
 
 const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
+  if (!coin) {
+    return (
+      <div className="mb-8 w-full animate-fade-in">
+        <div className="flex items-center gap-2 mb-4">
+          <Crown className="text-yellow-400 w-6 h-6 animate-bounce" />
+          <h2 className="text-xl font-bold text-yellow-400">King of the Hill</h2>
+        </div>
+        <div className="relative overflow-hidden rounded-2xl border-2 border-yellow-400/30 bg-gradient-to-r from-yellow-900/20 to-pump-card p-6 h-48 flex items-center justify-center">
+          <p className="text-gray-400">Loading top coin...</p>
+        </div>
+      </div>
+    );
+  }
+
   const amountInCurve = (42000 * (coin.bondingCurveProgress / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (

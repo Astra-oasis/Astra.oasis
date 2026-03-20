@@ -15,7 +15,8 @@ interface TokenForm {
   name: string;
   symbol: string;
   description: string;
-  image: File | null;
+  imageFile: File | null;
+  imageUrl: string;
 }
 
 const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreated }) => {
@@ -27,8 +28,11 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
     name: '',
     symbol: '',
     description: '',
-    image: null
+    imageFile: null,
+    imageUrl: ''
   });
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const checkConnection = async () => {
@@ -46,6 +50,57 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
     };
     checkConnection();
   }, []);
+
+  const handleImageUpload = async (file: File) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setForm(prev => ({
+          ...prev,
+          imageFile: file,
+          imageUrl: data.url
+        }));
+      } else {
+        alert('Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Upload error: ' + (error instanceof Error ? error.message : 'Unknown'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDragDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImageUpload(file);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  };
 
   const handleCreate = async () => {
     if (!form.name || !form.symbol) {
@@ -109,7 +164,7 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
               name: form.name,
               symbol: form.symbol,
               description: form.description || '',
-              image_url: '',
+              image_url: form.imageUrl || '',
               social_link: '',
               totalSupply: '1000000000',
               owner: userAddress,
@@ -225,10 +280,38 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
 
             <div>
               <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Token Image</label>
-              <div className="border-2 border-dashed border-gray-700 rounded-lg p-10 flex flex-col items-center justify-center text-gray-500 hover:border-blue-500 hover:text-blue-500 cursor-pointer transition-all bg-gray-900/50">
-                <Upload className="w-10 h-10 mb-3" />
-                <span className="text-sm font-medium">Drag and drop or click to upload</span>
-                <span className="text-xs text-gray-600 mt-1">PNG, JPG, GIF up to 5MB</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <div
+                onDragEnter={handleDragDrop}
+                onDragOver={handleDragDrop}
+                onDragLeave={handleDragDrop}
+                onDrop={handleDragDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-700 rounded-lg p-10 flex flex-col items-center justify-center text-gray-500 hover:border-blue-500 hover:text-blue-500 cursor-pointer transition-all bg-gray-900/50"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-10 h-10 mb-3 animate-spin" />
+                    <span className="text-sm font-medium">Uploading...</span>
+                  </>
+                ) : form.imageUrl ? (
+                  <>
+                    <img src={form.imageUrl} alt="Token" className="w-20 h-20 rounded-lg mb-3 object-cover" />
+                    <span className="text-sm font-medium text-blue-400">Change Image</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-10 h-10 mb-3" />
+                    <span className="text-sm font-medium">Drag and drop or click to upload</span>
+                    <span className="text-xs text-gray-600 mt-1">PNG, JPG, GIF up to 5MB</span>
+                  </>
+                )}
               </div>
             </div>
           </div>

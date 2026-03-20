@@ -9,7 +9,6 @@ import TransactionTable from './TransactionTable';
 import BondingCurve from './BondingCurve';
 import TokenInfoBar from './TokenInfoBar';
 import HoldersList from './HoldersList';
-import { MOCK_COMMENTS } from '../services/mockData';
 import { ArrowLeft, Sparkles, AlertTriangle } from 'lucide-react';
 import { ToastMessage } from './Toast';
 import { BrowserProvider, Contract, formatEther } from 'ethers';
@@ -23,7 +22,7 @@ interface CoinDetailProps {
 }
 
 const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
-  const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [analysis, setAnalysis] = useState<string>('Analyzing this gem on Oasis Sapphire... WAGMI! 🚀');
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [liveTrades, setLiveTrades] = useState<Trade[]>([]);
@@ -70,56 +69,81 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
     }
   };
 
+  const fetchRealTrades = async () => {
+    if (!coin.id) return;
+    try {
+      const response = await fetch(`/api/trades?tokenId=${coin.id}`);
+      const data = await response.json();
+      if (data.success && data.data) {
+        const formattedTrades: Trade[] = data.data.map((purchase: any) => ({
+          type: purchase.type_name || 'buy',
+          amount: parseFloat(purchase.amount) || 0,
+          price: parseFloat(purchase.price) || 0,
+          timestamp: new Date(purchase.created_at).getTime().toString(),
+          user: purchase.user_address || '0x...'
+        }));
+        setLiveTrades(formattedTrades);
+      }
+    } catch (error) {
+      console.error('Error fetching trades:', error);
+    }
+  };
+
+  const fetchRealComments = async () => {
+    if (!coin.id) return;
+    try {
+      const response = await fetch(`/api/comments?tokenId=${coin.id}`);
+      const data = await response.json();
+      if (data.success && data.data) {
+        const formattedComments: Comment[] = data.data.map((comment: any) => ({
+          id: comment.id.toString(),
+          user: comment.user_address || 'Anonymous',
+          text: comment.comment_text || '',
+          timestamp: new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'chat'
+        }));
+        setComments(formattedComments);
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
   useEffect(() => {
     window.scrollTo(0, 0);
     loadRealTokenData();
-    
-    // Initial dummy trades
-    const initialTrades: Trade[] = [];
-    const now = Date.now();
-    for(let i=0; i<5; i++) {
-        initialTrades.push({
-            type: Math.random() > 0.5 ? 'buy' : 'sell',
-            amount: Math.random() * 500 + 10,
-            price: 0.45 + (Math.random() * 0.05 - 0.025),
-            timestamp: (now - i * 5000).toString(),
-            user: `0x${Math.random().toString(16).substring(2, 10)}...`
-        });
-    }
-    setLiveTrades(initialTrades);
+    fetchRealTrades();
+    fetchRealComments();
 
   }, [coin]);
 
-  // Effect to simulate live random trades
-  useEffect(() => {
-    const interval = setInterval(() => {
-        const isBuy = Math.random() > 0.4; // Slightly more buys
-        const newTrade: Trade = {
-            type: isBuy ? 'buy' : 'sell',
-            amount: Math.random() * 200 + 10,
-            price: 0.45 + (Math.random() * 0.02 - 0.01),
-            timestamp: Date.now().toString(),
-            user: `0x${Math.random().toString(16).substring(2, 10)}...`
+  const handleAddComment = async (text: string) => {
+    if (!coin.id) return;
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenId: coin.id,
+          user: 'You',
+          text
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const newComment: Comment = {
+          id: data.data.id.toString(),
+          user: data.data.user_address || 'You',
+          text: data.data.comment_text,
+          timestamp: new Date(data.data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'chat'
         };
-
-        setLiveTrades(prev => {
-          const updated = [newTrade, ...prev].slice(0, 15);
-          return updated;
-        });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleAddComment = (text: string) => {
-    const newComment: Comment = {
-        id: Date.now().toString(),
-        user: 'You',
-        text,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        type: 'chat'
-    };
-    setComments([...comments, newComment]);
+        setComments([...comments, newComment]);
+      }
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
   };
 
   return (
