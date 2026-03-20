@@ -7,7 +7,6 @@ import KingOfTheHill from '../components/KingOfTheHill';
 import CoinCard from '../components/CoinCard';
 import FilterBar from '../components/FilterBar';
 import Toast, { ToastMessage } from '../components/Toast';
-import { MOCK_COINS } from '../services/mockData';
 import { Coin, ViewState, SortOption } from '../types';
 import { BrowserProvider, Contract } from 'ethers';
 import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
@@ -72,22 +71,34 @@ export default function Home() {
       const provider = new BrowserProvider(wrappedProvider);
       const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
 
+      // Fetch tokens from blockchain
       const tokens = await factory.getAllTokens();
-      const formattedTokens: Coin[] = tokens.map((t: any, idx: number) => ({
-        id: `real-${idx}`,
-        name: t.name,
-        ticker: t.symbol,
-        description: t.metadataURI || `Token created on Oasis Sapphire`,
-        imageUrl: `https://picsum.photos/200/200?random=${idx + 500}`,
-        creator: t.creator,
-        marketCap: 0, // Need to fetch price to calculate MC
-        replies: 0,
-        bondingCurveProgress: 0,
-        createdAt: Number(t.createdAt) * 1000,
-        lastReply: Number(t.createdAt) * 1000,
-        priceHistory: [],
-        tokenAddress: t.tokenAddress
-      }));
+      
+      // Fetch images from database
+      const imageResponse = await fetch('/api/tokens-images');
+      const imageData = await imageResponse.json();
+      const imageMap = imageData.images || {};
+
+      const formattedTokens: Coin[] = tokens.map((t: any, idx: number) => {
+        const contractAddressLower = t.tokenAddress.toLowerCase();
+        const imageUrl = imageMap[contractAddressLower] || `https://picsum.photos/200/200?random=${idx + 500}`;
+        
+        return {
+          id: `real-${idx}`,
+          name: t.name,
+          ticker: t.symbol,
+          description: t.metadataURI || `Token created on Oasis Sapphire`,
+          imageUrl: imageUrl, // Use database image or fallback to random
+          creator: t.creator,
+          marketCap: 0,
+          replies: 0,
+          bondingCurveProgress: 0,
+          createdAt: Number(t.createdAt) * 1000,
+          lastReply: Number(t.createdAt) * 1000,
+          priceHistory: [],
+          tokenAddress: t.tokenAddress
+        };
+      });
       setRealTokens(formattedTokens);
     } catch (error) {
       console.error('Error fetching tokens:', error);
@@ -101,7 +112,7 @@ export default function Home() {
   }, []);
 
   const sortedCoins = useMemo(() => {
-    const coins = [...realTokens, ...MOCK_COINS];
+    const coins = [...realTokens];
     switch (sortOption) {
       case 'marketCap':
         return coins.sort((a, b) => b.marketCap - a.marketCap);
