@@ -60,48 +60,35 @@ export default function Home() {
   };
 
   const fetchRealTokens = async () => {
-    if (!window.ethereum) return;
     setLoadingTokens(true);
     try {
-      let ethereum = window.ethereum;
-      if (window.ethereum.providers) {
-        ethereum = window.ethereum.providers.find((p: any) => p.isMetaMask) || window.ethereum;
-      }
-      const wrappedProvider = wrapEthereumProvider(ethereum);
-      const provider = new BrowserProvider(wrappedProvider);
-      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, provider);
+      // Fetch tokens from database only
+      const response = await fetch('/api/tokens');
+      const data = await response.json();
 
-      // Fetch tokens from blockchain
-      const tokens = await factory.getAllTokens();
-      
-      // Fetch images from database
-      const imageResponse = await fetch('/api/tokens-images');
-      const imageData = await imageResponse.json();
-      const imageMap = imageData.images || {};
-
-      const formattedTokens: Coin[] = tokens.map((t: any, idx: number) => {
-        const contractAddressLower = t.tokenAddress.toLowerCase();
-        const imageUrl = imageMap[contractAddressLower] || `https://picsum.photos/200/200?random=${idx + 500}`;
-        
-        return {
+      if (data.success && data.data) {
+        const formattedTokens: Coin[] = data.data.map((token: any, idx: number) => ({
           id: `real-${idx}`,
-          name: t.name,
-          ticker: t.symbol,
-          description: t.metadataURI || `Token created on Oasis Sapphire`,
-          imageUrl: imageUrl, // Use database image or fallback to random
-          creator: t.creator,
+          name: token.name,
+          ticker: token.symbol,
+          description: token.description || `Token created on Oasis Sapphire`,
+          imageUrl: token.image_url || `https://picsum.photos/200/200?random=${idx + 500}`,
+          creator: token.owner,
           marketCap: 0,
           replies: 0,
           bondingCurveProgress: 0,
-          createdAt: Number(t.createdAt) * 1000,
-          lastReply: Number(t.createdAt) * 1000,
+          createdAt: new Date(token.created_at).getTime(),
+          lastReply: new Date(token.created_at).getTime(),
           priceHistory: [],
-          tokenAddress: t.tokenAddress
-        };
-      });
-      setRealTokens(formattedTokens);
+          tokenAddress: token.contract_address
+        }));
+        setRealTokens(formattedTokens);
+      } else {
+        setRealTokens([]);
+      }
     } catch (error) {
       console.error('Error fetching tokens:', error);
+      setRealTokens([]);
     } finally {
       setLoadingTokens(false);
     }
