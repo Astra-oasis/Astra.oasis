@@ -14,7 +14,7 @@ async function main() {
 
     // TokenFactory address - need to find or deploy
     // For now, let's use the address from factoryAbi.ts
-    const factoryAddress = "0x69406A09aDCE3A662166Ad33c5e432204e438A77";
+    const factoryAddress = "0x69406A09aDCE3A662166Ad33c5e432204e438A7";
 
     const factoryAbi = [
         "function getTokenCount() view returns (uint256)",
