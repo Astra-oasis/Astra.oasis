@@ -9,6 +9,16 @@ CREATE TABLE IF NOT EXISTS tokens (
   total_supply BIGINT DEFAULT 0,
   owner VARCHAR(255) NOT NULL,
   contract_address VARCHAR(255) NOT NULL UNIQUE,
+  -- Market metrics
+  marketcap NUMERIC(36, 18) DEFAULT 0,
+  volume_24h NUMERIC(36, 18) DEFAULT 0,
+  price_change_5m NUMERIC(10, 4) DEFAULT 0,
+  price_change_1h NUMERIC(10, 4) DEFAULT 0,
+  price_change_6h NUMERIC(10, 4) DEFAULT 0,
+  trader_count INTEGER DEFAULT 0,
+  -- Timestamp tracking for price changes
+  price_snapshot_time TIMESTAMP,
+  price_snapshot_value NUMERIC(36, 18),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

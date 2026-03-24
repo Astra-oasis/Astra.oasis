@@ -90,7 +90,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
     }
   };
 
-  const savePurchaseToDatabase = async (type: 'buy' | 'sell', txHash: string, amount: string, price: string) => {
+  const savePurchaseToDatabase = async (type: 'buy' | 'sell', txHash: string, amount: string, totalPrice: string, pricePerToken: string) => {
     try {
       // Get token_id from database
       const tokenResponse = await fetch(`/api/tokens/by-address?contract_address=${coin.tokenAddress}`);
@@ -109,8 +109,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
           buyer_address: type === 'buy' ? userAddress : null,
           seller_address: type === 'sell' ? userAddress : null,
           quantity: amount,
-          price_per_token: currentPrice,
-          total_price: price,
+          price_per_token: pricePerToken,
+          total_price: totalPrice,
           transaction_hash: txHash,
           status: 'completed',
         }),
@@ -118,11 +118,37 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
 
       if (response.ok) {
         console.log('Purchase saved to database');
+
+        // Calculate and update metrics after saving purchase
+        await calculateAndUpdateMetrics(tokenData.token_id, pricePerToken);
       } else {
         console.warn('Failed to save purchase to database');
       }
     } catch (error) {
       console.warn('Error saving purchase to database:', error);
+    }
+  };
+
+  const calculateAndUpdateMetrics = async (tokenId: number, currentPrice?: string) => {
+    try {
+      // Don't pass current_price - let API fetch from blockchain
+      const metricsResponse = await fetch('/api/tokens/calculate-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token_id: tokenId,
+          current_price: currentPrice,
+        }),
+      });
+
+      if (metricsResponse.ok) {
+        const metricsData = await metricsResponse.json();
+        console.log('Metrics updated:', metricsData.data.metrics);
+      } else {
+        console.warn('Failed to update metrics');
+      }
+    } catch (error) {
+      console.warn('Error calculating metrics:', error);
     }
   };
 
@@ -160,8 +186,11 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
 
       const receipt = await tx.wait();
 
+      // Calculate actual price_per_token from transaction
+      const pricePerToken = (parseFloat(returnAmount) / parseFloat(amount)).toString();
+
       // Save to database
-      await savePurchaseToDatabase(mode, receipt.hash, amount, returnAmount);
+      await savePurchaseToDatabase(mode, receipt.hash, amount, returnAmount, pricePerToken);
 
       showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${amount} ${coin.ticker}`);
       setAmount('');
@@ -181,8 +210,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
         <div className="flex border-b border-gray-800">
           <button
             className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-all relative ${mode === 'buy'
-                ? 'text-pump-green bg-pump-green/5'
-                : 'text-gray-500 hover:text-gray-300 bg-gray-900/50'
+              ? 'text-pump-green bg-pump-green/5'
+              : 'text-gray-500 hover:text-gray-300 bg-gray-900/50'
               }`}
             onClick={() => setMode('buy')}
           >
@@ -191,8 +220,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
           </button>
           <button
             className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-all relative ${mode === 'sell'
-                ? 'text-pump-red bg-pump-red/5'
-                : 'text-gray-500 hover:text-gray-300 bg-gray-900/50'
+              ? 'text-pump-red bg-pump-red/5'
+              : 'text-gray-500 hover:text-gray-300 bg-gray-900/50'
               }`}
             onClick={() => setMode('sell')}
           >
@@ -293,8 +322,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
             onClick={handleTrade}
             disabled={loading}
             className={`w-full py-4 rounded-lg text-lg font-black uppercase tracking-widest shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 ${mode === 'buy'
-                ? 'bg-pump-green text-black hover:bg-green-400 shadow-[0_0_20px_rgba(74,222,128,0.2)]'
-                : 'bg-pump-red text-white hover:bg-red-400 shadow-[0_0_20px_rgba(248,113,113,0.2)]'
+              ? 'bg-pump-green text-black hover:bg-green-400 shadow-[0_0_20px_rgba(74,222,128,0.2)]'
+              : 'bg-pump-red text-white hover:bg-red-400 shadow-[0_0_20px_rgba(248,113,113,0.2)]'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : mode === 'buy' ? 'Place Buy Order' : 'Place Sell Order'}

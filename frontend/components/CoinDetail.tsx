@@ -8,6 +8,7 @@ import CommentSection from './CommentSection';
 import TransactionTable from './TransactionTable';
 import BondingCurve from './BondingCurve';
 import TokenInfoBar from './TokenInfoBar';
+import TokenMetrics from './TokenMetrics';
 import HoldersList from './HoldersList';
 import { ArrowLeft, Sparkles, AlertTriangle } from 'lucide-react';
 import { ToastMessage } from './Toast';
@@ -26,9 +27,10 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
   const [analysis, setAnalysis] = useState<string>('Analyzing this gem on Oasis Sapphire... WAGMI! 🚀');
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [liveTrades, setLiveTrades] = useState<Trade[]>([]);
-  
+
   // Real Token Data
   const [tokenData, setTokenData] = useState<Coin>(coin);
+  const [tokenMetrics, setTokenMetrics] = useState<any>(null);
 
   const getProvider = async () => {
     let ethereum = window.ethereum;
@@ -54,7 +56,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
 
       const priceEth = parseFloat(formatEther(price));
       const soldEth = parseFloat(formatEther(sold));
-      
+
       setTokenData(prev => ({
         ...prev,
         bondingCurveProgress: Number(progress),
@@ -64,8 +66,34 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
           { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), price: priceEth }
         ]
       }));
+
+      // Reload metrics after token data updates
+      loadTokenMetrics(priceEth);
     } catch (error) {
       console.error('Error loading real token data:', error);
+    }
+  };
+
+  const loadTokenMetrics = async (currentPrice?: number) => {
+    if (!coin.tokenAddress) return;
+    try {
+      const resolvedPrice = currentPrice ?? tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price;
+      const response = await fetch(`/api/tokens/calculate-metrics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token_address: coin.tokenAddress,
+          current_price: resolvedPrice
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.data) {
+        setTokenMetrics(data.data);
+      } else {
+        console.error('Error loading token metrics:', data);
+      }
+    } catch (error) {
+      console.error('Error loading token metrics:', error);
     }
   };
 
@@ -112,9 +140,24 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
   useEffect(() => {
     window.scrollTo(0, 0);
     loadRealTokenData();
+    loadTokenMetrics();
     fetchRealTrades();
     fetchRealComments();
 
+    // Auto-refresh price every 5 seconds
+    const priceInterval = setInterval(() => {
+      loadRealTokenData();
+    }, 5000);
+
+    // Auto-refresh metrics every 10 seconds to update marketcap with price changes
+    const metricsInterval = setInterval(() => {
+      loadTokenMetrics();
+    }, 10000);
+
+    return () => {
+      clearInterval(priceInterval);
+      clearInterval(metricsInterval);
+    };
   }, [coin]);
 
   const handleAddComment = async (text: string) => {
@@ -129,7 +172,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
           text
         })
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const newComment: Comment = {
@@ -154,63 +197,65 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
 
       <TokenInfoBar coin={tokenData} />
 
+      <TokenMetrics token={tokenMetrics} key={tokenMetrics?.id || 'empty'} />
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Chart, Analysis, Info */}
         <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-            
-            <TradingChart data={tokenData.priceHistory} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {/* AI Analysis Card */}
-                 <div className="bg-pump-card border border-gray-800 rounded-lg p-5 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-100 transition-opacity">
-                        <Sparkles className="text-pump-accent w-6 h-6 animate-pulse" />
-                    </div>
-                    <h3 className="text-xs font-black text-pump-accent uppercase tracking-widest mb-3 flex items-center gap-2">
-                        Astra AI Analysis
-                    </h3>
-                    {loadingAnalysis ? (
-                        <div className="space-y-2 animate-pulse">
-                            <div className="h-4 bg-gray-800 rounded w-full"></div>
-                            <div className="h-4 bg-gray-800 rounded w-5/6"></div>
-                            <div className="h-4 bg-gray-800 rounded w-4/6"></div>
-                        </div>
-                    ) : (
-                        <p className="text-gray-300 italic leading-relaxed">
-                            "{analysis}"
-                        </p>
-                    )}
-                </div>
+          <TradingChart data={tokenData.priceHistory} />
 
-                {/* Bonding Curve Status */}
-                <div className="bg-pump-card border border-gray-800 rounded-lg p-5">
-                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Bonding Curve Progress</h3>
-                    <BondingCurve progress={tokenData.bondingCurveProgress} />
-                    <div className="mt-4 flex gap-3 items-start bg-yellow-900/10 border border-yellow-700/20 p-3 rounded text-[11px] text-yellow-500/80">
-                        <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <p>When the market cap reaches <b>$69,420</b> all the liquidity from the bonding curve will be deposited into <b>Oasis DEX</b> and burned.</p>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* AI Analysis Card */}
+            <div className="bg-pump-card border border-gray-800 rounded-lg p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-100 transition-opacity">
+                <Sparkles className="text-pump-accent w-6 h-6 animate-pulse" />
+              </div>
+              <h3 className="text-xs font-black text-pump-accent uppercase tracking-widest mb-3 flex items-center gap-2">
+                Astra AI Analysis
+              </h3>
+              {loadingAnalysis ? (
+                <div className="space-y-2 animate-pulse">
+                  <div className="h-4 bg-gray-800 rounded w-full"></div>
+                  <div className="h-4 bg-gray-800 rounded w-5/6"></div>
+                  <div className="h-4 bg-gray-800 rounded w-4/6"></div>
                 </div>
+              ) : (
+                <p className="text-gray-300 italic leading-relaxed">
+                  "{analysis}"
+                </p>
+              )}
             </div>
 
-            {/* Comment & Trade Desktop view */}
-            <div className="hidden lg:block">
-               <TransactionTable trades={liveTrades} />
+            {/* Bonding Curve Status */}
+            <div className="bg-pump-card border border-gray-800 rounded-lg p-5">
+              <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Bonding Curve Progress</h3>
+              <BondingCurve progress={tokenData.bondingCurveProgress} />
+              <div className="mt-4 flex gap-3 items-start bg-yellow-900/10 border border-yellow-700/20 p-3 rounded text-[11px] text-yellow-500/80">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <p>When the market cap reaches <b>$69,420</b> all the liquidity from the bonding curve will be deposited into <b>Oasis DEX</b> and burned.</p>
+              </div>
             </div>
+          </div>
+
+          {/* Comment & Trade Desktop view */}
+          <div className="hidden lg:block">
+            <TransactionTable trades={liveTrades} />
+          </div>
         </div>
 
         {/* Right Column: Trade Form, Holders, Chat */}
         <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-            <TradeForm coin={tokenData} showToast={showToast} onSuccess={loadRealTokenData} />
-            
-            <CommentSection comments={comments} onAddComment={handleAddComment} />
-            
-            <HoldersList />
+          <TradeForm coin={tokenData} showToast={showToast} onSuccess={loadRealTokenData} />
 
-            {/* Mobile Transaction table */}
-            <div className="lg:hidden">
-                <TransactionTable trades={liveTrades} />
-            </div>
+          <CommentSection comments={comments} onAddComment={handleAddComment} />
+
+          <HoldersList />
+
+          {/* Mobile Transaction table */}
+          <div className="lg:hidden">
+            <TransactionTable trades={liveTrades} />
+          </div>
         </div>
       </div>
     </div>

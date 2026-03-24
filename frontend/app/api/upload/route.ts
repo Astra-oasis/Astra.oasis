@@ -1,6 +1,8 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'nodejs';
+
 // Configure Cloudinary with environment variables from root .env
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
