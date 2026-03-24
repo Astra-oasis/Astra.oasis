@@ -1,6 +1,7 @@
 {
   "/page": "app/page.js",
+  "/api/tokens/by-address/route": "app/api/tokens/by-address/route.js",
   "/api/trades/route": "app/api/trades/route.js",
-  "/api/comments/route": "app/api/comments/route.js",
-  "/api/tokens/route": "app/api/tokens/route.js"
+  "/api/purchases/route": "app/api/purchases/route.js",
+  "/api/comments/route": "app/api/comments/route.js"
 }

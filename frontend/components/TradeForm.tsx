@@ -23,6 +23,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
   const [balance, setBalance] = useState('0');
   const [tokenBalance, setTokenBalance] = useState('0');
   const [estimatedCost, setEstimatedCost] = useState('0');
+  const [userAddress, setUserAddress] = useState('');
+  const [currentPrice, setCurrentPrice] = useState('0');
 
   const getProvider = async () => {
     let ethereum = window.ethereum;
@@ -39,6 +41,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
       const provider = await getProvider();
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
+      setUserAddress(address);
       
       const ethBalance = await provider.getBalance(address);
       setBalance(formatEther(ethBalance));
@@ -46,6 +49,10 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
       const tokenContract = new Contract(coin.tokenAddress, TOKEN_ABI, provider);
       const tBalance = await tokenContract.balanceOf(address);
       setTokenBalance(formatEther(tBalance));
+
+      // Get current price
+      const price = await tokenContract.getCurrentPrice();
+      setCurrentPrice(formatEther(price));
     } catch (error) {
       console.error('Error loading balances:', error);
     }
@@ -83,6 +90,42 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
     }
   };
 
+  const savePurchaseToDatabase = async (type: 'buy' | 'sell', txHash: string, amount: string, price: string) => {
+    try {
+      // Get token_id from database
+      const tokenResponse = await fetch(`/api/tokens/by-address?contract_address=${coin.tokenAddress}`);
+      const tokenData = await tokenResponse.json();
+
+      if (!tokenData.success || !tokenData.token_id) {
+        console.warn('Could not find token in database');
+        return;
+      }
+
+      const response = await fetch('/api/purchases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token_id: tokenData.token_id,
+          buyer_address: type === 'buy' ? userAddress : null,
+          seller_address: type === 'sell' ? userAddress : null,
+          quantity: amount,
+          price_per_token: currentPrice,
+          total_price: price,
+          transaction_hash: txHash,
+          status: 'completed',
+        }),
+      });
+
+      if (response.ok) {
+        console.log('Purchase saved to database');
+      } else {
+        console.warn('Failed to save purchase to database');
+      }
+    } catch (error) {
+      console.warn('Error saving purchase to database:', error);
+    }
+  };
+
   const handleTrade = async () => {
     if (!amount || parseFloat(amount) <= 0) {
         showToast('error', 'Trade Failed', 'Please enter a valid amount.');
@@ -104,14 +147,22 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
       const amountWei = parseEther(amount);
 
       let tx;
+      let returnAmount = estimatedCost;
       if (mode === 'buy') {
         const cost = await tokenContract.getBuyPrice(amountWei);
         tx = await tokenContract.buyTokens(amountWei, { value: cost });
+        returnAmount = formatEther(cost);
       } else {
+        const sellReturn = await tokenContract.getSellPrice(amountWei);
         tx = await tokenContract.sellTokens(amountWei);
+        returnAmount = formatEther(sellReturn);
       }
 
-      await tx.wait();
+      const receipt = await tx.wait();
+      
+      // Save to database
+      await savePurchaseToDatabase(mode, receipt.hash, amount, returnAmount);
+
       showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${amount} ${coin.ticker}`);
       setAmount('');
       loadBalances();
