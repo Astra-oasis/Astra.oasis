@@ -1,10 +1,4 @@
 {
   "/page": "app/page.js",
-  "/api/tokens/route": "app/api/tokens/route.js",
-  "/api/comments/route": "app/api/comments/route.js",
-  "/api/tokens/calculate-metrics/route": "app/api/tokens/calculate-metrics/route.js",
-  "/api/trades/route": "app/api/trades/route.js",
-  "/api/tokens/by-address/route": "app/api/tokens/by-address/route.js",
-  "/api/transactions/route": "app/api/transactions/route.js",
-  "/api/purchases/route": "app/api/purchases/route.js"
+  "/api/tokens/calculate-metrics/route": "app/api/tokens/calculate-metrics/route.js"
 }
