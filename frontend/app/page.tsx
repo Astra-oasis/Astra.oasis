@@ -45,6 +45,8 @@ export default function Home() {
   const handleGoHome = () => {
     setSelectedCoin(null);
     setViewState(ViewState.GRID);
+    // Refetch tokens when returning to dashboard
+    fetchRealTokens();
   };
 
   const handleGoCreate = () => {
@@ -62,7 +64,7 @@ export default function Home() {
   const fetchRealTokens = async () => {
     setLoadingTokens(true);
     try {
-      // Fetch tokens from database only
+      // Fetch tokens from database only, sorted by marketcap descending
       const response = await fetch('/api/tokens');
       const data = await response.json();
 
@@ -74,7 +76,7 @@ export default function Home() {
           description: token.description || `Token created on Oasis Sapphire`,
           imageUrl: token.image_url || `https://picsum.photos/200/200?random=${idx + 500}`,
           creator: token.owner,
-          marketCap: 0,
+          marketCap: parseFloat(token.marketcap) || 0,
           replies: 0,
           bondingCurveProgress: 0,
           createdAt: new Date(token.created_at).getTime(),
@@ -99,6 +101,17 @@ export default function Home() {
     fetchRealTokens();
   }, []);
 
+  // Auto-refresh tokens every 10 seconds when on dashboard (GRID view)
+  useEffect(() => {
+    if (viewState !== ViewState.GRID) return;
+
+    const interval = setInterval(() => {
+      fetchRealTokens();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [viewState]);
+
   const sortedCoins = useMemo(() => {
     const coins = [...realTokens];
     switch (sortOption) {
@@ -110,7 +123,8 @@ export default function Home() {
         return coins.sort((a, b) => b.lastReply - a.lastReply);
       case 'featured':
       default:
-        return coins;
+        // Sort by marketCap for featured view (King of the Hill and default display)
+        return coins.sort((a, b) => b.marketCap - a.marketCap);
     }
   }, [sortOption, realTokens]);
 
