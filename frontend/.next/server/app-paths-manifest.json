@@ -1,7 +1,7 @@
 {
-  "/page": "app/page.js",
-  "/api/tokens/by-address/route": "app/api/tokens/by-address/route.js",
   "/api/tokens/update-metrics/route": "app/api/tokens/update-metrics/route.js",
+  "/api/tokens/calculate-metrics/route": "app/api/tokens/calculate-metrics/route.js",
   "/api/purchases/route": "app/api/purchases/route.js",
-  "/api/tokens/calculate-metrics/route": "app/api/tokens/calculate-metrics/route.js"
+  "/api/tokens/by-address/route": "app/api/tokens/by-address/route.js",
+  "/page": "app/page.js"
 }

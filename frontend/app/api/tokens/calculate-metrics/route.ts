@@ -139,11 +139,13 @@ export async function POST(request: NextRequest) {
 
         // Get price at different time intervals from purchases - use separate queries
         try {
-            // Price 1 hour ago
+            // Price 1 hour ago (latest trade before cutoff)
             const price1hResult = await query(
-                `SELECT AVG(price_per_token) as price_1h_ago 
-                 FROM purchases 
-                 WHERE token_id = $1 AND created_at >= NOW() - INTERVAL '65 minutes' AND created_at < NOW() - INTERVAL '60 minutes'`,
+                `SELECT price_per_token as price_1h_ago
+                 FROM purchases
+                 WHERE token_id = $1 AND created_at <= NOW() - INTERVAL '1 hour'
+                 ORDER BY created_at DESC
+                 LIMIT 1`,
                 [tokenId]
             );
             const price_1h_ago = price1hResult.rows[0]?.price_1h_ago ? parseFloat(price1hResult.rows[0].price_1h_ago) : null;
@@ -151,14 +153,34 @@ export async function POST(request: NextRequest) {
                 price_change_1h = ((price - price_1h_ago) / price_1h_ago) * 100;
             }
 
-            // Price 6 hours ago
+            // Price 6 hours ago (latest trade before cutoff)
             const price6hResult = await query(
-                `SELECT AVG(price_per_token) as price_6h_ago 
-                 FROM purchases 
-                 WHERE token_id = $1 AND created_at >= NOW() - INTERVAL '360 minutes' AND created_at < NOW() - INTERVAL '355 minutes'`,
+                `SELECT price_per_token as price_6h_ago
+                 FROM purchases
+                 WHERE token_id = $1 AND created_at <= NOW() - INTERVAL '6 hours'
+                 ORDER BY created_at DESC
+                 LIMIT 1`,
                 [tokenId]
             );
-            const price_6h_ago = price6hResult.rows[0]?.price_6h_ago ? parseFloat(price6hResult.rows[0].price_6h_ago) : null;
+            let price_6h_ago = price6hResult.rows[0]?.price_6h_ago
+                ? parseFloat(price6hResult.rows[0].price_6h_ago)
+                : null;
+
+            if (!price_6h_ago) {
+                // Fallback: use earliest available trade if token is newer than 6h
+                const earliestResult = await query(
+                    `SELECT price_per_token as price_earliest
+                     FROM purchases
+                     WHERE token_id = $1
+                     ORDER BY created_at ASC
+                     LIMIT 1`,
+                    [tokenId]
+                );
+                price_6h_ago = earliestResult.rows[0]?.price_earliest
+                    ? parseFloat(earliestResult.rows[0].price_earliest)
+                    : null;
+            }
+
             if (price_6h_ago) {
                 price_change_6h = ((price - price_6h_ago) / price_6h_ago) * 100;
             }
@@ -167,7 +189,7 @@ export async function POST(request: NextRequest) {
             const recentPriceResult = await query(
                 `SELECT AVG(price_per_token) as price_recent 
                  FROM purchases 
-                 WHERE token_id = $1 AND created_at >= NOW() - INTERVAL '1 minute'`,
+                 WHERE token_id = $1 AND created_at >= NOW() - INTERVAL '5 minutes'`,
                 [tokenId]
             );
             const price_recent = recentPriceResult.rows[0]?.price_recent ? parseFloat(recentPriceResult.rows[0].price_recent) : null;
