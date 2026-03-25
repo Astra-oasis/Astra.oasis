@@ -109,15 +109,15 @@ export async function POST(request: NextRequest) {
         // Calculate Marketcap = current_price * total_supply (both in actual token units)
         const marketcap = price * totalSupply;
 
-                // Calculate Volume 24h from purchases table (total token quantity)
-                const volume24hResult = await query(
-                        `SELECT COALESCE(SUM(quantity), 0) as volume 
+        // Calculate Volume 24h from purchases table (total token quantity)
+        const volume24hResult = await query(
+            `SELECT COALESCE(SUM(quantity), 0) as volume 
                          FROM purchases 
                          WHERE token_id = $1
                              AND status = 'completed'
                              AND created_at >= NOW() - INTERVAL '24 hours'`,
-                        [tokenId]
-                );
+            [tokenId]
+        );
         const volume_24h = parseFloat(volume24hResult.rows[0].volume) || 0;
 
         // Calculate Trader Count (unique buyers + sellers)
@@ -148,7 +148,25 @@ export async function POST(request: NextRequest) {
                  LIMIT 1`,
                 [tokenId]
             );
-            const price_1h_ago = price1hResult.rows[0]?.price_1h_ago ? parseFloat(price1hResult.rows[0].price_1h_ago) : null;
+            let price_1h_ago = price1hResult.rows[0]?.price_1h_ago
+                ? parseFloat(price1hResult.rows[0].price_1h_ago)
+                : null;
+
+            if (!price_1h_ago) {
+                // Fallback: use earliest available trade if token is newer than 1h
+                const earliestResult = await query(
+                    `SELECT price_per_token as price_earliest
+                     FROM purchases
+                     WHERE token_id = $1
+                     ORDER BY created_at ASC
+                     LIMIT 1`,
+                    [tokenId]
+                );
+                price_1h_ago = earliestResult.rows[0]?.price_earliest
+                    ? parseFloat(earliestResult.rows[0].price_earliest)
+                    : null;
+            }
+
             if (price_1h_ago) {
                 price_change_1h = ((price - price_1h_ago) / price_1h_ago) * 100;
             }
