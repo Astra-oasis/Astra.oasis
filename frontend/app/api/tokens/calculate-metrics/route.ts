@@ -109,15 +109,15 @@ export async function POST(request: NextRequest) {
         // Calculate Marketcap = current_price * total_supply (both in actual token units)
         const marketcap = price * totalSupply;
 
-        // Calculate Volume 24h from purchases table (include buys + sells by value)
-        const volume24hResult = await query(
-            `SELECT COALESCE(SUM(quantity), 0) as volume 
-             FROM purchases 
-             WHERE token_id = $1
-               AND status = 'completed'
-               AND created_at >= NOW() - INTERVAL '24 hours'`,
-            [tokenId]
-        );
+                // Calculate Volume 24h from purchases table (total token quantity)
+                const volume24hResult = await query(
+                        `SELECT COALESCE(SUM(quantity), 0) as volume 
+                         FROM purchases 
+                         WHERE token_id = $1
+                             AND status = 'completed'
+                             AND created_at >= NOW() - INTERVAL '24 hours'`,
+                        [tokenId]
+                );
         const volume_24h = parseFloat(volume24hResult.rows[0].volume) || 0;
 
         // Calculate Trader Count (unique buyers + sellers)
