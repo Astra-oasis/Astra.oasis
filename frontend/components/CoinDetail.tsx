@@ -20,9 +20,10 @@ interface CoinDetailProps {
   coin: Coin;
   onBack: () => void;
   showToast: (type: ToastMessage['type'], title: string, message: string) => void;
+  removeToast: (id: string) => void;
 }
 
-const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
+const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, removeToast }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [analysis, setAnalysis] = useState<string>('Analyzing this gem on Oasis Sapphire... WAGMI! 🚀');
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
@@ -246,7 +247,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast }) => {
 
         {/* Right Column: Trade Form, Holders, Chat */}
         <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-          <TradeForm coin={tokenData} showToast={showToast} onSuccess={loadRealTokenData} />
+          <TradeForm coin={tokenData} showToast={showToast} removeToast={removeToast} onSuccess={loadRealTokenData} />
 
           <CommentSection comments={comments} onAddComment={handleAddComment} />
 

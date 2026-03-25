@@ -12,10 +12,11 @@ import { TOKEN_ABI } from '../abi/factoryAbi';
 interface TradeFormProps {
   coin: Coin;
   showToast: (type: ToastMessage['type'], title: string, message: string) => void;
+  removeToast: (id: string) => void;
   onSuccess?: () => void;
 }
 
-const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => {
+const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onSuccess }) => {
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -25,6 +26,9 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
   const [estimatedCost, setEstimatedCost] = useState('0');
   const [userAddress, setUserAddress] = useState('');
   const [currentPrice, setCurrentPrice] = useState('0');
+  const [priceImpact, setPriceImpact] = useState('0');
+  const [oasisFee, setOasisFee] = useState('0');
+  const [processingToastId, setProcessingToastId] = useState<string | null>(null);
 
   const getProvider = async () => {
     let ethereum = window.ethereum;
@@ -69,6 +73,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
   const calculateEstimatedCost = async () => {
     if (!amount || parseFloat(amount) <= 0 || !coin.tokenAddress) {
       setEstimatedCost('0');
+      setPriceImpact('0');
+      setOasisFee('0');
       return;
     }
 
@@ -79,14 +85,36 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
 
       if (mode === 'buy') {
         const cost = await tokenContract.getBuyPrice(amountWei);
-        setEstimatedCost(formatEther(cost));
+        const costEth = parseFloat(formatEther(cost));
+        setEstimatedCost(costEth.toString());
+        
+        // Calculate price impact
+        const expectedCost = parseFloat(currentPrice) * parseFloat(amount);
+        const impact = expectedCost > 0 ? ((costEth - expectedCost) / expectedCost) * 100 : 0;
+        setPriceImpact(impact.toFixed(2));
+        
+        // Calculate Oasis fee (typically 0.1% of cost)
+        const fee = costEth * 0.001;
+        setOasisFee(fee.toFixed(6));
       } else {
         const returnAmount = await tokenContract.getSellPrice(amountWei);
-        setEstimatedCost(formatEther(returnAmount));
+        const returnEth = parseFloat(formatEther(returnAmount));
+        setEstimatedCost(returnEth.toString());
+        
+        // Calculate price impact for sell
+        const expectedReturn = parseFloat(currentPrice) * parseFloat(amount);
+        const impact = expectedReturn > 0 ? ((returnEth - expectedReturn) / expectedReturn) * 100 : 0;
+        setPriceImpact(impact.toFixed(2));
+        
+        // Calculate Oasis fee
+        const fee = returnEth * 0.001;
+        setOasisFee(fee.toFixed(6));
       }
     } catch (error) {
       console.error('Error calculating cost:', error);
       setEstimatedCost('0');
+      setPriceImpact('0');
+      setOasisFee('0');
     }
   };
 
@@ -164,6 +192,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
     }
 
     setLoading(true);
+    const toastId = Date.now().toString();
+    setProcessingToastId(toastId);
     showToast('processing', 'Processing Transaction', 'Interacting with Oasis Sapphire...');
 
     try {
@@ -192,15 +222,20 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
       // Save to database
       await savePurchaseToDatabase(mode, receipt.hash, amount, returnAmount, pricePerToken);
 
+      // Remove processing toast and show success
+      removeToast(toastId);
       showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${amount} ${coin.ticker}`);
       setAmount('');
       loadBalances();
       if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Trade error:', error);
+      // Remove processing toast and show error
+      removeToast(toastId);
       showToast('error', 'Transaction Failed', error.reason || error.message);
     } finally {
       setLoading(false);
+      setProcessingToastId(null);
     }
   };
 
@@ -241,7 +276,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
             </button>
             <div className="flex items-center gap-1 text-gray-500">
               <Wallet className="w-3.5 h-3.5" />
-              <span>{mode === 'buy' ? `${parseFloat(balance).toFixed(4)} ROSE` : `${parseFloat(tokenBalance).toFixed(2)} ${coin.ticker}`}</span>
+              <span>{mode === 'buy' ? `${parseFloat(balance).toFixed(4)} TEST` : `${parseFloat(tokenBalance).toFixed(2)} ${coin.ticker}`}</span>
             </div>
           </div>
 
@@ -276,7 +311,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
                   onClick={() => setAmount(val.toString())}
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-xs py-2 rounded text-gray-300 font-mono transition-colors border border-transparent hover:border-gray-600"
                 >
-                  {val} ROSE
+                  {val} {coin.ticker}
                 </button>
               ))}
             </div>
@@ -310,11 +345,13 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, onSuccess }) => 
             )}
             <div className="flex justify-between items-center text-gray-500">
               <span>Price Impact</span>
-              <span className="font-mono text-pump-green">~0.05%</span>
+              <span className={`font-mono ${parseFloat(priceImpact) >= 0 ? 'text-pump-green' : 'text-pump-red'}`}>
+                {parseFloat(priceImpact) >= 0 ? '~' : ''}{parseFloat(priceImpact).toFixed(2)}%
+              </span>
             </div>
             <div className="flex justify-between items-center text-gray-500">
               <span>Oasis Fee</span>
-              <span className="font-mono text-gray-400">0.001 ROSE</span>
+              <span className="font-mono text-gray-400">{parseFloat(oasisFee).toFixed(6)} TEST</span>
             </div>
           </div>
 

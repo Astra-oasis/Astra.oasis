@@ -80,7 +80,8 @@ export default function Home() {
           createdAt: new Date(token.created_at).getTime(),
           lastReply: new Date(token.created_at).getTime(),
           priceHistory: [],
-          tokenAddress: token.contract_address
+          tokenAddress: token.contract_address,
+          contractAddress: token.contract_address
         }));
         setRealTokens(formattedTokens);
       } else {
@@ -200,6 +201,7 @@ export default function Home() {
             coin={selectedCoin}
             onBack={handleGoHome}
             showToast={addToast}
+            removeToast={removeToast}
           />
         )}
 
