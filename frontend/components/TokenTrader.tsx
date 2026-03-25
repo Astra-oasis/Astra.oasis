@@ -106,13 +106,29 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
         return
       }
 
+      let resolvedAddress = userAddress
+      if (!resolvedAddress && window.ethereum) {
+        try {
+          const provider = await getProvider()
+          const signer = await provider.getSigner()
+          resolvedAddress = await signer.getAddress()
+        } catch (error) {
+          console.warn('Could not resolve wallet address:', error)
+        }
+      }
+
+      if (!resolvedAddress) {
+        console.warn('Missing wallet address for purchase record')
+        return
+      }
+
       const response = await fetch('/api/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token_id: tokenData.token_id,
-          buyer_address: type === 'buy' ? userAddress : null,
-          seller_address: type === 'sell' ? userAddress : null,
+          buyer_address: type === 'buy' ? resolvedAddress : null,
+          seller_address: type === 'sell' ? resolvedAddress : null,
           quantity: amount,
           price_per_token: pricePerToken,
           total_price: totalPrice,
@@ -127,7 +143,8 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
         // Calculate and update metrics after saving purchase
         await calculateAndUpdateMetrics(tokenData.token_id)
       } else {
-        console.warn('Failed to save purchase to database')
+        const errorText = await response.text()
+        console.warn('Failed to save purchase to database:', errorText)
       }
     } catch (error) {
       console.warn('Error saving purchase to database:', error)

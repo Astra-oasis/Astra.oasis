@@ -87,12 +87,12 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
         const cost = await tokenContract.getBuyPrice(amountWei);
         const costEth = parseFloat(formatEther(cost));
         setEstimatedCost(costEth.toString());
-        
+
         // Calculate price impact
         const expectedCost = parseFloat(currentPrice) * parseFloat(amount);
         const impact = expectedCost > 0 ? ((costEth - expectedCost) / expectedCost) * 100 : 0;
         setPriceImpact(impact.toFixed(2));
-        
+
         // Calculate Oasis fee (typically 0.1% of cost)
         const fee = costEth * 0.001;
         setOasisFee(fee.toFixed(6));
@@ -100,12 +100,12 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
         const returnAmount = await tokenContract.getSellPrice(amountWei);
         const returnEth = parseFloat(formatEther(returnAmount));
         setEstimatedCost(returnEth.toString());
-        
+
         // Calculate price impact for sell
         const expectedReturn = parseFloat(currentPrice) * parseFloat(amount);
         const impact = expectedReturn > 0 ? ((returnEth - expectedReturn) / expectedReturn) * 100 : 0;
         setPriceImpact(impact.toFixed(2));
-        
+
         // Calculate Oasis fee
         const fee = returnEth * 0.001;
         setOasisFee(fee.toFixed(6));
@@ -129,13 +129,29 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
         return;
       }
 
+      let resolvedAddress = userAddress;
+      if (!resolvedAddress && window.ethereum) {
+        try {
+          const provider = await getProvider();
+          const signer = await provider.getSigner();
+          resolvedAddress = await signer.getAddress();
+        } catch (error) {
+          console.warn('Could not resolve wallet address:', error);
+        }
+      }
+
+      if (!resolvedAddress) {
+        console.warn('Missing wallet address for purchase record');
+        return;
+      }
+
       const response = await fetch('/api/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token_id: tokenData.token_id,
-          buyer_address: type === 'buy' ? userAddress : null,
-          seller_address: type === 'sell' ? userAddress : null,
+          buyer_address: type === 'buy' ? resolvedAddress : null,
+          seller_address: type === 'sell' ? resolvedAddress : null,
           quantity: amount,
           price_per_token: pricePerToken,
           total_price: totalPrice,
@@ -150,7 +166,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
         // Calculate and update metrics after saving purchase
         await calculateAndUpdateMetrics(tokenData.token_id, pricePerToken);
       } else {
-        console.warn('Failed to save purchase to database');
+        const errorText = await response.text();
+        console.warn('Failed to save purchase to database:', errorText);
       }
     } catch (error) {
       console.warn('Error saving purchase to database:', error);

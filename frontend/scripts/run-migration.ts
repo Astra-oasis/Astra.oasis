@@ -15,17 +15,28 @@ const pool = new Pool({
 
 async function runMigration() {
     try {
-        console.log('🚀 Starting migration: Add Token Metrics Columns...\n');
+        console.log('🚀 Starting migrations...\n');
 
-        // Read migration SQL file
-        const migrationPath = path.join(__dirname, '../../migrations/001_add_token_metrics.sql');
-        const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+        const migrationsDir = path.join(__dirname, '../../migrations');
+        const migrationFiles = fs
+            .readdirSync(migrationsDir)
+            .filter((file) => file.endsWith('.sql'))
+            .sort();
 
-        // Execute migration
-        console.log('📝 Executing migration SQL...');
-        await pool.query(migrationSQL);
+        if (migrationFiles.length === 0) {
+            console.log('⚠️  No migration files found.');
+            await pool.end();
+            return;
+        }
 
-        console.log('✓ Migration executed successfully!\n');
+        for (const file of migrationFiles) {
+            const migrationPath = path.join(migrationsDir, file);
+            const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+            console.log(`📝 Executing migration: ${file}`);
+            await pool.query(migrationSQL);
+        }
+
+        console.log('✓ All migrations executed successfully!\n');
 
         // Verify columns
         console.log('🔍 Verifying new columns:');
