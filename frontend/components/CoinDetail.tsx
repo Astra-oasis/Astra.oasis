@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Coin, Comment, Trade } from '../types';
-import TradingChart from './TradingChart';
+import TokenLightweightChart from './TokenLightweightChart';
 import TradeForm from './TradeForm';
 import CommentSection from './CommentSection';
 import TransactionTable from './TransactionTable';
@@ -204,7 +204,11 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
         {/* Left Column: Chart, Analysis, Info */}
         <div className="lg:col-span-8 xl:col-span-9 space-y-6">
 
-          <TradingChart data={tokenData.priceHistory} />
+          <TokenLightweightChart
+            tokenId={coin.id}
+            ticker={coin.ticker}
+            currentPrice={tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* AI Analysis Card */}

@@ -17,6 +17,7 @@ interface TradeFormProps {
 }
 
 const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onSuccess }) => {
+  const symbol = coin.ticker.toUpperCase();
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -241,7 +242,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
 
       // Remove processing toast and show success
       removeToast(toastId);
-      showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${amount} ${coin.ticker}`);
+      showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${amount} ${symbol}`);
       setAmount('');
       loadBalances();
       if (onSuccess) onSuccess();
@@ -293,13 +294,13 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
             </button>
             <div className="flex items-center gap-1 text-gray-500">
               <Wallet className="w-3.5 h-3.5" />
-              <span>{mode === 'buy' ? `${parseFloat(balance).toFixed(4)} TEST` : `${parseFloat(tokenBalance).toFixed(2)} ${coin.ticker}`}</span>
+              <span>{mode === 'buy' ? `${parseFloat(balance).toFixed(4)} TEST` : `${parseFloat(tokenBalance).toFixed(2)} ${symbol}`}</span>
             </div>
           </div>
 
           <div className="bg-gray-900/80 rounded-lg p-4 border border-gray-800 focus-within:border-pump-green/50 transition-colors">
             <div className="flex justify-between text-xs font-bold text-gray-500 mb-2">
-              <span className="uppercase">{mode === 'buy' ? `Amount (${coin.ticker})` : `Amount (${coin.ticker})`}</span>
+              <span className="uppercase">{mode === 'buy' ? `Amount (${symbol})` : `Amount (${symbol})`}</span>
               <span className="uppercase cursor-pointer hover:text-white" onClick={() => setAmount(mode === 'buy' ? '100' : tokenBalance)}>Max</span>
             </div>
             <div className="flex items-center justify-between gap-4">
@@ -312,7 +313,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
               />
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold bg-gray-800 px-2 py-1 rounded text-gray-300">
-                  {coin.ticker}
+                  {symbol}
                 </span>
               </div>
             </div>
@@ -328,7 +329,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
                   onClick={() => setAmount(val.toString())}
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-xs py-2 rounded text-gray-300 font-mono transition-colors border border-transparent hover:border-gray-600"
                 >
-                  {val} {coin.ticker}
+                  {val} {symbol}
                 </button>
               ))}
             </div>
