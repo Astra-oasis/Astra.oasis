@@ -1,61 +1,187 @@
-import React from 'react';
+'use client'
+
+import React, { useEffect, useState } from 'react';
 import { Coin } from '../types';
-import { TrendingUp, AlertCircle, ExternalLink } from 'lucide-react';
-import { formatMarketCap } from '../utils/formatters';
+import { ExternalLink, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 interface TokenInfoBarProps {
-  coin: Coin;
+    coin: Coin;
 }
 
 const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin }) => {
-  const price = coin.priceHistory[coin.priceHistory.length - 1]?.price || 0.00000001;
-  const change24h = Math.random() * 200 - 50; // Mock change
+    const [metrics, setMetrics] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const OASIS_EXPLORER_URL = 'https://explorer.sapphire.oasis.io/address';
 
-  return (
-    <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-pump-card border border-gray-800 rounded-lg p-4 mb-4 gap-4">
-      <div className="flex items-center gap-4">
-        <div className="flex flex-col">
-            <h1 className="text-xl font-bold text-white">
-                {coin.name}
-            </h1>
-            <div className="text-lg text-gray-500 font-mono">
-                {coin.ticker}
-            </div>
-            <div className="flex items-center gap-3 text-xs mt-1">
-                <span className="bg-gray-800 text-gray-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-gray-700">
-                    {coin.creator.slice(0, 6)}...{coin.creator.slice(-4)} <ExternalLink className="w-3 h-3" />
-                </span>
-                <span className="text-gray-500">Created {new Date(coin.createdAt).toLocaleDateString()}</span>
-            </div>
-        </div>
-      </div>
+    useEffect(() => {
+        const fetchMetrics = async () => {
+            if (!coin.tokenAddress && !coin.id) {
+                setLoading(false);
+                return;
+            }
 
-      <div className="flex flex-wrap items-center gap-6 md:gap-8">
-        <div>
-            <div className="text-[10px] text-gray-500 uppercase font-bold">Price</div>
-            <div className={`text-lg font-mono font-bold ${change24h >= 0 ? 'text-pump-green' : 'text-pump-red'}`}>
-                ${price.toFixed(8)}
+            try {
+                const response = await fetch(
+                    `/api/tokens/update-metrics?token_address=${coin.tokenAddress || coin.contractAddress}`
+                );
+                const data = await response.json();
+                if (data.success && data.data) {
+                    setMetrics(data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching metrics:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMetrics();
+        const interval = setInterval(fetchMetrics, 10000);
+        return () => clearInterval(interval);
+    }, [coin.tokenAddress, coin.id, coin.contractAddress]);
+
+    const openExplorer = (address: string) => {
+        window.open(`${OASIS_EXPLORER_URL}/${address}`, '_blank');
+    };
+
+    const formatVolume = (volume: number) => {
+        if (volume >= 1000000) return `${(volume / 1000000).toFixed(1)}M`;
+        if (volume >= 1000) return `${(volume / 1000).toFixed(1)}K`;
+        return volume.toFixed(2);
+    };
+
+    const formatPrice = (price: number) => {
+        if (price < 0.00001) return price.toFixed(8);
+        if (price < 0.01) return price.toFixed(6);
+        return price.toFixed(8);
+    };
+
+    const getPriceChangeColor = (change: number) => {
+        if (change > 0) return 'text-pump-green';
+        if (change < 0) return 'text-pump-red';
+        return 'text-gray-400';
+    };
+
+    const getPriceChangeIcon = (change: number) => {
+        if (change > 0) return <ArrowUpRight className="w-4 h-4 inline" />;
+        if (change < 0) return <ArrowDownRight className="w-4 h-4 inline" />;
+        return null;
+    };
+
+    const volume = metrics ? parseFloat(metrics.volume_24h) || 0 : 0;
+    const price = metrics ? parseFloat(metrics.price_snapshot_value) || 0 : 0;
+    const marketCap = metrics ? parseFloat(metrics.marketcap) || 0 : 0;
+    const change5m = metrics ? parseFloat(metrics.price_change_5m) || 0 : 0;
+    const change1h = metrics ? parseFloat(metrics.price_change_1h) || 0 : 0;
+    const change6h = metrics ? parseFloat(metrics.price_change_6h) || 0 : 0;
+
+    return (
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-pump-card border border-gray-800 rounded-lg p-4 mb-4 gap-4 md:gap-8">
+            {/* Left: Token Info */}
+            <div className="flex items-center gap-4 flex-1">
+                <div className="flex flex-col">
+                    <h1 className="text-xl font-bold text-white">
+                        {coin.name}
+                    </h1>
+                    <div className="text-lg text-gray-500 font-mono">
+                        {coin.ticker}
+                    </div>
+                    <div className="flex items-center gap-3 text-xs mt-1">
+                        <button
+                            onClick={() => openExplorer(coin.creator)}
+                            className="bg-gray-800 text-gray-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-gray-700 transition-colors"
+                            title="View creator on Oasis Explorer"
+                        >
+                            {coin.creator.slice(0, 6)}...{coin.creator.slice(-4)} <ExternalLink className="w-3 h-3" />
+                        </button>
+                        {coin.contractAddress && (
+                            <button
+                                onClick={() => openExplorer(coin.contractAddress!)}
+                                className="bg-gray-800 text-gray-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-gray-700 transition-colors"
+                                title="View contract on Oasis Explorer"
+                            >
+                                {coin.contractAddress.slice(0, 6)}...{coin.contractAddress.slice(-4)} <ExternalLink className="w-3 h-3" />
+                            </button>
+                        )}
+                        <span className="text-gray-500">Created {new Date(coin.createdAt).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Right: Metrics */}
+            <div className="flex gap-4 md:gap-6 flex-wrap md:flex-nowrap md:justify-end overflow-x-auto">
+                {loading ? (
+                    <>
+                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex flex-col justify-center min-w-fit">
+                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                                Market Cap
+                            </div>
+                            <div className="text-lg font-bold text-white font-mono">
+                                ${marketCap ? (marketCap / 1000000).toFixed(2) : '0.00'}M
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col justify-center min-w-fit">
+                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                                Vol 24h
+                            </div>
+                            <div className="text-lg font-bold text-white font-mono">
+                                {formatVolume(volume)}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col justify-center min-w-fit">
+                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                                Price
+                            </div>
+                            <div className="text-lg font-bold text-white font-mono">
+                                {formatPrice(price)}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col justify-center min-w-fit">
+                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                                5m
+                            </div>
+                            <div className={`text-lg font-bold font-mono flex items-center gap-1 ${getPriceChangeColor(change5m)}`}>
+                                {getPriceChangeIcon(change5m)}
+                                {change5m.toFixed(2)}%
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col justify-center min-w-fit">
+                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                                1h
+                            </div>
+                            <div className={`text-lg font-bold font-mono flex items-center gap-1 ${getPriceChangeColor(change1h)}`}>
+                                {getPriceChangeIcon(change1h)}
+                                {change1h.toFixed(2)}%
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col justify-center min-w-fit">
+                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                                6h
+                            </div>
+                            <div className={`text-lg font-bold font-mono flex items-center gap-1 ${getPriceChangeColor(change6h)}`}>
+                                {getPriceChangeIcon(change6h)}
+                                {change6h.toFixed(2)}%
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
-        <div>
-            <div className="text-[10px] text-gray-500 uppercase font-bold">MC: {formatMarketCap(coin.marketCap)}</div>
-        </div>
-        <div className="hidden sm:block">
-            <div className="text-[10px] text-gray-500 uppercase font-bold">24h Change</div>
-            <div className={`text-lg font-mono font-bold flex items-center gap-1 ${change24h >= 0 ? 'text-pump-green' : 'text-pump-red'}`}>
-                {change24h >= 0 ? <TrendingUp className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                {change24h.toFixed(2)}%
-            </div>
-        </div>
-         <div className="hidden sm:block">
-            <div className="text-[10px] text-gray-500 uppercase font-bold">Virtual Liq</div>
-            <div className="text-lg font-mono font-bold text-white">
-                $18,420
-            </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default TokenInfoBar;

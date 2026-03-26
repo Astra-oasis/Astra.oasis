@@ -48,7 +48,7 @@ const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
                 <p className="text-yellow-200/80 text-lg mb-4 font-medium">MC: {formatMarketCap(coin.marketCap)}</p>
                 <p className="text-gray-300 max-w-2xl">{coin.description}</p>
                 
-                <div className="mt-4 w-full max-w-md">
+                <div className="mt-4 w-full">
                    <div className="flex justify-between text-sm text-yellow-400 mb-1 font-bold">
                         <span className="uppercase">Bonding Curve Progress</span>
                         <span>{coin.bondingCurveProgress}%</span>
@@ -60,7 +60,7 @@ const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
                         />
                    </div>
                    <p className="text-xs text-yellow-500/70 font-medium">
-                        There are {amountInCurve} ROSE in the bonding curve
+                        There are {amountInCurve} TEST in the bonding curve
                    </p>
                 </div>
             </div>

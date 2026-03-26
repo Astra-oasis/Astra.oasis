@@ -15,11 +15,22 @@ export async function POST(request: NextRequest) {
             status,
         } = body;
 
-        if (!token_id || !buyer_address || !quantity || !price_per_token || !total_price) {
+        if (!token_id || !quantity || !price_per_token || !total_price) {
             return NextResponse.json(
                 {
                     error:
-                        'Missing required fields: token_id, buyer_address, quantity, price_per_token, total_price',
+                        'Missing required fields: token_id, quantity, price_per_token, total_price',
+                },
+                { status: 400 }
+            );
+        }
+
+        // Either buyer_address or seller_address must be provided
+        if (!buyer_address && !seller_address) {
+            return NextResponse.json(
+                {
+                    error:
+                        'Either buyer_address or seller_address must be provided',
                 },
                 { status: 400 }
             );
@@ -31,7 +42,7 @@ export async function POST(request: NextRequest) {
        RETURNING *`,
             [
                 token_id,
-                buyer_address,
+                buyer_address || null,
                 seller_address || null,
                 quantity,
                 price_per_token,

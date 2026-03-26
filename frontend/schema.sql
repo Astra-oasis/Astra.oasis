@@ -9,6 +9,16 @@ CREATE TABLE IF NOT EXISTS tokens (
   total_supply BIGINT DEFAULT 0,
   owner VARCHAR(255) NOT NULL,
   contract_address VARCHAR(255) NOT NULL UNIQUE,
+  -- Market metrics
+  marketcap NUMERIC(36, 18) DEFAULT 0,
+  volume_24h NUMERIC(36, 18) DEFAULT 0,
+  price_change_5m NUMERIC(10, 4) DEFAULT 0,
+  price_change_1h NUMERIC(10, 4) DEFAULT 0,
+  price_change_6h NUMERIC(10, 4) DEFAULT 0,
+  trader_count INTEGER DEFAULT 0,
+  -- Timestamp tracking for price changes
+  price_snapshot_time TIMESTAMP,
+  price_snapshot_value NUMERIC(36, 18),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -28,9 +38,9 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS purchases (
   id SERIAL PRIMARY KEY,
   token_id INTEGER NOT NULL REFERENCES tokens(id) ON DELETE CASCADE,
-  buyer_address VARCHAR(255) NOT NULL,
+  buyer_address VARCHAR(255),
   seller_address VARCHAR(255),
-  quantity BIGINT NOT NULL,
+  quantity NUMERIC(36, 18) NOT NULL,
   price_per_token NUMERIC(36, 18) NOT NULL,
   total_price NUMERIC(36, 18) NOT NULL,
   transaction_hash VARCHAR(255),

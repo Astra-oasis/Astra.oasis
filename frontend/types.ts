@@ -12,6 +12,7 @@ export interface Coin {
   lastReply: number;
   priceHistory: { time: string; price: number }[];
   tokenAddress?: string; // Added for real contract interaction
+  contractAddress?: string; // Smart contract address
 }
 
 export interface Comment {
