@@ -70,7 +70,7 @@ export default function Home() {
 
       if (data.success && data.data) {
         const formattedTokens: Coin[] = data.data.map((token: any, idx: number) => ({
-          id: `real-${idx}`,
+          id: String(token.id ?? idx),
           name: token.name,
           ticker: token.symbol,
           description: token.description || `Token created on Oasis Sapphire`,

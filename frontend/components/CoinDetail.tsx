@@ -32,6 +32,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   // Real Token Data
   const [tokenData, setTokenData] = useState<Coin>(coin);
   const [tokenMetrics, setTokenMetrics] = useState<any>(null);
+  const [chartRefreshKey, setChartRefreshKey] = useState(0);
 
   const getProvider = async () => {
     let ethereum = window.ethereum;
@@ -190,13 +191,25 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
     }
   };
 
+  const handleTradeSuccess = async () => {
+    await Promise.all([
+      loadRealTokenData(),
+      fetchRealTrades(),
+      loadTokenMetrics(),
+    ]);
+    setChartRefreshKey((prev) => prev + 1);
+  };
+
   return (
     <div className="container mx-auto px-4 py-4 max-w-[1600px] animate-fade-in">
       <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-white mb-4 text-sm font-bold uppercase transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to board
       </button>
 
-      <TokenInfoBar coin={tokenData} />
+      <TokenInfoBar
+        coin={tokenData}
+        currentPriceOverride={tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price}
+      />
 
       <TokenMetrics token={tokenMetrics} key={tokenMetrics?.id || 'empty'} />
 
@@ -208,6 +221,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
             tokenId={coin.id}
             ticker={coin.ticker}
             currentPrice={tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price}
+            refreshKey={chartRefreshKey}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -251,7 +265,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
 
         {/* Right Column: Trade Form, Holders, Chat */}
         <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-          <TradeForm coin={tokenData} showToast={showToast} removeToast={removeToast} onSuccess={loadRealTokenData} />
+          <TradeForm coin={tokenData} showToast={showToast} removeToast={removeToast} onSuccess={handleTradeSuccess} />
 
           <CommentSection comments={comments} onAddComment={handleAddComment} />
 

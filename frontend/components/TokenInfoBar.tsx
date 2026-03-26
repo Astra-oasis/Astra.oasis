@@ -6,9 +6,10 @@ import { ExternalLink, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 interface TokenInfoBarProps {
     coin: Coin;
+    currentPriceOverride?: number;
 }
 
-const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin }) => {
+const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride }) => {
     const [metrics, setMetrics] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const OASIS_EXPLORER_URL = 'https://explorer.sapphire.oasis.io/address';
@@ -69,7 +70,8 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin }) => {
     };
 
     const volume = metrics ? parseFloat(metrics.volume_24h) || 0 : 0;
-    const price = metrics ? parseFloat(metrics.price_snapshot_value) || 0 : 0;
+    const metricsPrice = metrics ? parseFloat(metrics.price_snapshot_value) || 0 : 0;
+    const price = currentPriceOverride && currentPriceOverride > 0 ? currentPriceOverride : metricsPrice;
     const marketCap = metrics ? parseFloat(metrics.marketcap) || 0 : 0;
     const change5m = metrics ? parseFloat(metrics.price_change_5m) || 0 : 0;
     const change1h = metrics ? parseFloat(metrics.price_change_1h) || 0 : 0;

@@ -17,12 +17,13 @@ interface TokenLightweightChartProps {
     tokenId: string | number;
     ticker: string;
     currentPrice?: number;
+    refreshKey?: number;
 }
 
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
 type Interval = typeof INTERVALS[number];
 
-export default function TokenLightweightChart({ tokenId, ticker, currentPrice }: TokenLightweightChartProps) {
+export default function TokenLightweightChart({ tokenId, ticker, currentPrice, refreshKey }: TokenLightweightChartProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -34,10 +35,61 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
     const [priceChange, setPriceChange] = useState<number>(0);
     const isFetchingRef = useRef(false);
     const fitContentPendingRef = useRef(true);
+    const followLatestRef = useRef(true);
+    const candleCountRef = useRef(0);
 
     // Use ref for currentPrice to avoid re-creating fetchCandles on every price tick
     const currentPriceRef = useRef(currentPrice);
     useEffect(() => { currentPriceRef.current = currentPrice; }, [currentPrice]);
+
+    const alignLatestCandleWithCurrentPrice = useCallback((source: CandlestickData[]): CandlestickData[] => {
+        const cp = currentPriceRef.current;
+        if (!cp || cp <= 0 || source.length === 0) {
+            return source;
+        }
+
+        const cloned = [...source];
+        const lastIndex = cloned.length - 1;
+        const last = cloned[lastIndex];
+
+        cloned[lastIndex] = {
+            ...last,
+            close: cp,
+            high: Math.max(last.high, last.open, cp),
+            low: Math.min(last.low, last.open, cp),
+        };
+
+        return cloned;
+    }, []);
+
+    const ensureVisibleBody = (data: CandlestickData[]): CandlestickData[] => {
+        return data.map((candle, index) => {
+            if (candle.open !== candle.close) {
+                return candle;
+            }
+
+            const previous = data[index - 1];
+            if (previous && previous.close !== candle.close) {
+                // Sparse buckets often have a single trade; carry forward previous close as open
+                // so the candle body reflects real movement between buckets.
+                return {
+                    ...candle,
+                    open: previous.close,
+                    high: Math.max(candle.high, previous.close, candle.close),
+                    low: Math.min(candle.low, previous.close, candle.close),
+                };
+            }
+
+            // If there is no previous movement, keep a very small body to avoid disappearing doji.
+            const epsilon = Math.max(Math.abs(candle.close) * 0.001, 0.00000001);
+            return {
+                ...candle,
+                close: candle.close + epsilon,
+                high: Math.max(candle.high, candle.open, candle.close + epsilon),
+                low: Math.min(candle.low, candle.open, candle.close + epsilon),
+            };
+        });
+    };
 
     const fetchCandles = useCallback(async (showLoader = false) => {
         if (!tokenId) {
@@ -56,9 +108,10 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
             const res = await fetch(`/api/ohlcv?tokenId=${tokenId}&interval=${interval}`);
             const data = await res.json();
             if (data.success && data.data.length > 0) {
-                setCandles(data.data);
-                const last = data.data[data.data.length - 1];
-                const first = data.data[0];
+                const alignedCandles = alignLatestCandleWithCurrentPrice(data.data);
+                setCandles(alignedCandles);
+                const last = alignedCandles[alignedCandles.length - 1];
+                const first = alignedCandles[0];
                 setPriceChange(((last.close - first.open) / first.open) * 100);
             } else {
                 // No trades yet — show a single synthetic candle from current price
@@ -86,7 +139,7 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
                 setLoading(false);
             }
         }
-    }, [tokenId, interval]); // currentPrice intentionally excluded — use ref instead
+    }, [tokenId, interval, alignLatestCandleWithCurrentPrice]); // currentPrice intentionally excluded — use ref instead
 
     // Init chart once
     useEffect(() => {
@@ -116,6 +169,9 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
                 borderColor: 'rgba(139, 92, 246, 0.2)',
                 timeVisible: true,
                 secondsVisible: false,
+                rightOffset: 8,
+                barSpacing: 12,
+                minBarSpacing: 2,
             },
             handleScale: {
                 mouseWheel: true,
@@ -160,6 +216,18 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
         candleSeriesRef.current = candleSeries;
         volumeSeriesRef.current = volumeSeries;
 
+        chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+            if (!range) {
+                followLatestRef.current = true;
+                return;
+            }
+
+            // If user is still close to the latest bar, keep auto-following realtime.
+            const bars = candleCountRef.current;
+            const latestLogicalIndex = Math.max(0, bars - 1);
+            followLatestRef.current = range.to >= latestLogicalIndex - 2;
+        });
+
         // Responsive resize
         const resizeObserver = new ResizeObserver(() => {
             if (containerRef.current) {
@@ -179,10 +247,13 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
     useEffect(() => {
         if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
         if (candles.length === 0) return;
+        candleCountRef.current = candles.length;
 
-        candleSeriesRef.current.setData(candles);
+        const displayCandles = ensureVisibleBody(candles);
+
+        candleSeriesRef.current.setData(displayCandles);
         volumeSeriesRef.current.setData(
-            candles.map((c: any) => ({
+            displayCandles.map((c: any) => ({
                 time: c.time,
                 value: c.volume ?? 0,
                 color: c.close >= c.open ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
@@ -190,14 +261,25 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
         );
 
         if (fitContentPendingRef.current) {
-            chartRef.current?.timeScale().fitContent();
+            const total = displayCandles.length;
+            chartRef.current?.timeScale().setVisibleLogicalRange({
+                from: Math.max(0, total - 60),
+                to: total + 5,
+            });
             fitContentPendingRef.current = false;
+            followLatestRef.current = true;
+            return;
+        }
+
+        if (followLatestRef.current) {
+            chartRef.current?.timeScale().scrollToRealTime();
         }
     }, [candles]);
 
     // Fetch on interval change
     useEffect(() => {
         fitContentPendingRef.current = true;
+        followLatestRef.current = true;
         fetchCandles(true);
     }, [fetchCandles]);
 
@@ -208,6 +290,31 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice }:
         }, 10000);
         return () => clearInterval(timer);
     }, [fetchCandles]);
+
+    // Keep last candle synchronized with current price source from parent.
+    useEffect(() => {
+        const cp = currentPriceRef.current;
+        if (!cp || cp <= 0) return;
+
+        setCandles((prev) => {
+            if (prev.length === 0) return prev;
+            const aligned = alignLatestCandleWithCurrentPrice(prev);
+            if (aligned.length > 0) {
+                const first = aligned[0];
+                const last = aligned[aligned.length - 1];
+                if (first.open > 0) {
+                    setPriceChange(((last.close - first.open) / first.open) * 100);
+                }
+            }
+            return aligned;
+        });
+    }, [currentPrice, alignLatestCandleWithCurrentPrice]);
+
+    // Force immediate refresh after successful trade in parent component
+    useEffect(() => {
+        if (refreshKey === undefined) return;
+        fetchCandles(false);
+    }, [refreshKey, fetchCandles]);
 
     const symbol = `${ticker.toUpperCase()}/TEST`;
     const isPositive = priceChange >= 0;
