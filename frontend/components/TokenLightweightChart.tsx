@@ -22,126 +22,199 @@ interface TokenLightweightChartProps {
 
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
 type Interval = typeof INTERVALS[number];
+type CandleWithVolume = CandlestickData & { volume?: number };
 
-export default function TokenLightweightChart({ tokenId, ticker, currentPrice, refreshKey }: TokenLightweightChartProps) {
+const INTERVAL_SECONDS: Record<Interval, number> = {
+    '1m': 60,
+    '5m': 300,
+    '15m': 900,
+    '1h': 3600,
+    '4h': 14400,
+    '1d': 86400,
+};
+
+const pad2 = (n: number) => n.toString().padStart(2, '0');
+
+/**
+ * Tính bucket timestamp chuẩn UTC - giống TradingView
+ * 1m  → floor to minute
+ * 5m  → floor to 5-minute mark (0,5,10,15...)
+ * 1h  → floor to hour
+ * 1d  → floor to 00:00 UTC
+ */
+function getBucketTime(unixSec: number, intervalSec: number): number {
+    return Math.floor(unixSec / intervalSec) * intervalSec;
+}
+
+/**
+ * Thời gian còn lại đến khi đóng nến hiện tại
+ */
+function getRemainingSeconds(nowSec: number, intervalSec: number): number {
+    const elapsed = nowSec % intervalSec;
+    return elapsed === 0 ? intervalSec : intervalSec - elapsed;
+}
+
+function formatCountdown(seconds: number): string {
+    const s = Math.max(0, seconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${pad2(h)}:${pad2(m)}:${pad2(sec)}`;
+    return `${pad2(m)}:${pad2(sec)}`;
+}
+
+export default function TokenLightweightChart({
+    tokenId,
+    ticker,
+    currentPrice: _currentPrice,
+    refreshKey,
+}: TokenLightweightChartProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
 
-    const [interval, setInterval] = useState<Interval>('5m');
-    const [candles, setCandles] = useState<CandlestickData[]>([]);
+    const [interval, setIntervalState] = useState<Interval>('5m');
+    const [candles, setCandles] = useState<CandleWithVolume[]>([]);
     const [loading, setLoading] = useState(true);
-    const [priceChange, setPriceChange] = useState<number>(0);
+    const [priceChange, setPriceChange] = useState(0);
+    const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+    const [countdownY, setCountdownY] = useState<number | null>(null);
     const isFetchingRef = useRef(false);
-    const fitContentPendingRef = useRef(true);
-    const followLatestRef = useRef(true);
-    const candleCountRef = useRef(0);
+    const fitPendingRef = useRef(true);
 
-    // Use ref for currentPrice to avoid re-creating fetchCandles on every price tick
-    const currentPriceRef = useRef(currentPrice);
-    useEffect(() => { currentPriceRef.current = currentPrice; }, [currentPrice]);
+    const intervalSec = INTERVAL_SECONDS[interval];
+    const remaining = getRemainingSeconds(nowSec, intervalSec);
+    const countdownLabel = formatCountdown(remaining);
 
-    const alignLatestCandleWithCurrentPrice = useCallback((source: CandlestickData[]): CandlestickData[] => {
-        const cp = currentPriceRef.current;
-        if (!cp || cp <= 0 || source.length === 0) {
-            return source;
-        }
+    // ─── Build live candles - chuẩn TradingView ──────────────────────────────
+    const buildLiveCandles = useCallback(
+        (source: CandleWithVolume[]): CandleWithVolume[] => {
+            const cp = typeof _currentPrice === 'number' && _currentPrice > 0 ? _currentPrice : null;
+            const nowBucket = getBucketTime(nowSec, intervalSec);
 
-        const cloned = [...source];
-        const lastIndex = cloned.length - 1;
-        const last = cloned[lastIndex];
-
-        cloned[lastIndex] = {
-            ...last,
-            close: cp,
-            high: Math.max(last.high, last.open, cp),
-            low: Math.min(last.low, last.open, cp),
-        };
-
-        return cloned;
-    }, []);
-
-    const ensureVisibleBody = (data: CandlestickData[]): CandlestickData[] => {
-        return data.map((candle, index) => {
-            if (candle.open !== candle.close) {
-                return candle;
+            if (source.length === 0) {
+                if (!cp) return [];
+                return [{
+                    time: nowBucket as Time,
+                    open: cp, high: cp, low: cp, close: cp, volume: 0,
+                }];
             }
 
-            const previous = data[index - 1];
-            if (previous && previous.close !== candle.close) {
-                // Sparse buckets often have a single trade; carry forward previous close as open
-                // so the candle body reflects real movement between buckets.
-                return {
-                    ...candle,
-                    open: previous.close,
-                    high: Math.max(candle.high, previous.close, candle.close),
-                    low: Math.min(candle.low, previous.close, candle.close),
+            // Normalize + sort
+            const sorted: CandleWithVolume[] = [...source]
+                .sort((a, b) => Number(a.time) - Number(b.time))
+                .map((c) => ({
+                    time: getBucketTime(Number(c.time), intervalSec) as Time,
+                    open: Number(c.open),
+                    high: Number(c.high),
+                    low: Number(c.low),
+                    close: Number(c.close),
+                    volume: Number(c.volume ?? 0),
+                }));
+
+            // Deduplicate buckets (keep last)
+            const bucketMap = new Map<number, CandleWithVolume>();
+            for (const c of sorted) {
+                bucketMap.set(Number(c.time), c);
+            }
+            const deduped = Array.from(bucketMap.values()).sort(
+                (a, b) => Number(a.time) - Number(b.time)
+            );
+
+            // Fill gap buckets với flat candle (close của nến trước)
+            // Giống TradingView: không có giao dịch thì nến flat
+            const filled: CandleWithVolume[] = [];
+            for (let i = 0; i < deduped.length; i++) {
+                filled.push(deduped[i]);
+                if (i < deduped.length - 1) {
+                    let t = Number(deduped[i].time) + intervalSec;
+                    const nextT = Number(deduped[i + 1].time);
+                    const prevClose = deduped[i].close;
+                    while (t < nextT) {
+                        filled.push({
+                            time: t as Time,
+                            open: prevClose,
+                            high: prevClose,
+                            low: prevClose,
+                            close: prevClose,
+                            volume: 0,
+                        });
+                        t += intervalSec;
+                    }
+                }
+            }
+
+            // Extend đến bucket hiện tại
+            let last = filled[filled.length - 1];
+            let lastT = Number(last.time);
+            while (lastT < nowBucket) {
+                const nextT = lastT + intervalSec;
+                const flat: CandleWithVolume = {
+                    time: nextT as Time,
+                    open: last.close,
+                    high: last.close,
+                    low: last.close,
+                    close: last.close,
+                    volume: 0,
+                };
+                filled.push(flat);
+                last = flat;
+                lastT = nextT;
+            }
+
+            // Update nến hiện tại với currentPrice
+            // Đây là nến đang hình thành - cập nhật high/low/close đúng chuẩn
+            if (cp !== null) {
+                const idx = filled.length - 1;
+                const cur = filled[idx];
+                // Wick: high = max của tất cả giá đã qua trong bucket
+                //        low  = min của tất cả giá đã qua trong bucket
+                filled[idx] = {
+                    ...cur,
+                    close: cp,
+                    high: Math.max(cur.high, cur.open, cp),
+                    low:  Math.min(cur.low,  cur.open, cp),
                 };
             }
 
-            // If there is no previous movement, keep a very small body to avoid disappearing doji.
-            const epsilon = Math.max(Math.abs(candle.close) * 0.001, 0.00000001);
-            return {
-                ...candle,
-                close: candle.close + epsilon,
-                high: Math.max(candle.high, candle.open, candle.close + epsilon),
-                low: Math.min(candle.low, candle.open, candle.close + epsilon),
-            };
-        });
-    };
+            return filled;
+        },
+        [_currentPrice, intervalSec, nowSec]
+    );
 
-    const fetchCandles = useCallback(async (showLoader = false) => {
-        if (!tokenId) {
-            setCandles([]);
-            setPriceChange(0);
-            setLoading(false);
-            return;
-        }
-        if (isFetchingRef.current) return;
-
-        if (showLoader) {
-            setLoading(true);
-        }
-        isFetchingRef.current = true;
-        try {
-            const res = await fetch(`/api/ohlcv?tokenId=${tokenId}&interval=${interval}`);
-            const data = await res.json();
-            if (data.success && data.data.length > 0) {
-                const alignedCandles = alignLatestCandleWithCurrentPrice(data.data);
-                setCandles(alignedCandles);
-                const last = alignedCandles[alignedCandles.length - 1];
-                const first = alignedCandles[0];
-                setPriceChange(((last.close - first.open) / first.open) * 100);
-            } else {
-                // No trades yet — show a single synthetic candle from current price
-                const cp = currentPriceRef.current;
-                if (cp && cp > 0) {
-                    const now = Math.floor(Date.now() / 1000);
-                    const syntheticCandle: CandlestickData = {
-                        time: now as Time,
-                        open: cp, high: cp, low: cp, close: cp,
-                    };
-                    setCandles([syntheticCandle]);
-                    setPriceChange(0);
+    // ─── Fetch OHLCV ─────────────────────────────────────────────────────────
+    const fetchCandles = useCallback(
+        async (showLoader = false) => {
+            if (!tokenId) { setCandles([]); setLoading(false); return; }
+            if (isFetchingRef.current) return;
+            if (showLoader) setLoading(true);
+            isFetchingRef.current = true;
+            try {
+                const res = await fetch(`/api/ohlcv?tokenId=${tokenId}&interval=${interval}`);
+                const data = await res.json();
+                if (data.success && data.data.length > 0) {
+                    setCandles(data.data);
+                    const first = data.data[0];
+                    const last = data.data[data.data.length - 1];
+                    if (first.open > 0) {
+                        setPriceChange(((last.close - first.open) / first.open) * 100);
+                    }
                 } else {
                     setCandles([]);
                     setPriceChange(0);
                 }
+            } catch {
+                setCandles([]);
+            } finally {
+                isFetchingRef.current = false;
+                if (showLoader) setLoading(false);
             }
-        } catch (e) {
-            console.error('OHLCV fetch error:', e);
-            setCandles([]);
-            setPriceChange(0);
-        } finally {
-            isFetchingRef.current = false;
-            if (showLoader) {
-                setLoading(false);
-            }
-        }
-    }, [tokenId, interval, alignLatestCandleWithCurrentPrice]); // currentPrice intentionally excluded — use ref instead
+        },
+        [tokenId, interval]
+    );
 
-    // Init chart once
+    // ─── Init chart ───────────────────────────────────────────────────────────
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -162,16 +235,19 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice, r
             },
             rightPriceScale: {
                 borderColor: 'rgba(139, 92, 246, 0.2)',
-                scaleMargins: { top: 0.1, bottom: 0.25 },
+                scaleMargins: { top: 0.08, bottom: 0.22 },
                 autoScale: true,
             },
             timeScale: {
                 borderColor: 'rgba(139, 92, 246, 0.2)',
                 timeVisible: true,
+                // secondsVisible chỉ bật cho 1m
                 secondsVisible: false,
-                rightOffset: 8,
+                rightOffset: 10,
                 barSpacing: 12,
                 minBarSpacing: 2,
+                fixLeftEdge: false,
+                fixRightEdge: false,
             },
             handleScale: {
                 mouseWheel: true,
@@ -188,13 +264,14 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice, r
             height: 420,
         });
 
+        // Candlestick series - màu giống TradingView mặc định
         const candleSeries = chart.addSeries(CandlestickSeries, {
-            upColor: '#22c55e',
-            downColor: '#ef4444',
-            borderUpColor: '#22c55e',
-            borderDownColor: '#ef4444',
-            wickUpColor: '#22c55e',
-            wickDownColor: '#ef4444',
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderUpColor: '#26a69a',
+            borderDownColor: '#ef5350',
+            wickUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
             priceFormat: {
                 type: 'price',
                 precision: 8,
@@ -202,6 +279,7 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice, r
             },
         });
 
+        // Volume histogram
         const volumeSeries = chart.addSeries(HistogramSeries, {
             color: 'rgba(139, 92, 246, 0.3)',
             priceFormat: { type: 'volume' },
@@ -209,113 +287,108 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice, r
         });
 
         chart.priceScale('volume').applyOptions({
-            scaleMargins: { top: 0.8, bottom: 0 },
+            scaleMargins: { top: 0.82, bottom: 0 },
         });
 
         chartRef.current = chart;
         candleSeriesRef.current = candleSeries;
         volumeSeriesRef.current = volumeSeries;
 
-        chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-            if (!range) {
-                followLatestRef.current = true;
-                return;
-            }
-
-            // If user is still close to the latest bar, keep auto-following realtime.
-            const bars = candleCountRef.current;
-            const latestLogicalIndex = Math.max(0, bars - 1);
-            followLatestRef.current = range.to >= latestLogicalIndex - 2;
-        });
-
-        // Responsive resize
-        const resizeObserver = new ResizeObserver(() => {
+        const ro = new ResizeObserver(() => {
             if (containerRef.current) {
                 chart.applyOptions({ width: containerRef.current.clientWidth });
             }
         });
-        resizeObserver.observe(containerRef.current);
+        ro.observe(containerRef.current);
 
         return () => {
-            resizeObserver.disconnect();
+            ro.disconnect();
             chart.remove();
             chartRef.current = null;
+            candleSeriesRef.current = null;
+            volumeSeriesRef.current = null;
         };
     }, []);
 
-    // Update data when candles change
+    // secondsVisible chỉ bật cho 1m
     useEffect(() => {
-        if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
-        if (candles.length === 0) return;
-        candleCountRef.current = candles.length;
+        chartRef.current?.applyOptions({
+            timeScale: { secondsVisible: interval === '1m' },
+        });
+    }, [interval]);
 
-        const displayCandles = ensureVisibleBody(candles);
-
-        candleSeriesRef.current.setData(displayCandles);
-        volumeSeriesRef.current.setData(
-            displayCandles.map((c: any) => ({
-                time: c.time,
-                value: c.volume ?? 0,
-                color: c.close >= c.open ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
-            }))
-        );
-
-        if (fitContentPendingRef.current) {
-            const total = displayCandles.length;
-            chartRef.current?.timeScale().setVisibleLogicalRange({
-                from: Math.max(0, total - 60),
-                to: total + 5,
-            });
-            fitContentPendingRef.current = false;
-            followLatestRef.current = true;
-            return;
-        }
-
-        if (followLatestRef.current) {
-            chartRef.current?.timeScale().scrollToRealTime();
-        }
-    }, [candles]);
-
-    // Fetch on interval change
+    // Fetch khi đổi interval
     useEffect(() => {
-        fitContentPendingRef.current = true;
-        followLatestRef.current = true;
+        fitPendingRef.current = true;
         fetchCandles(true);
     }, [fetchCandles]);
 
-    // Live update every 10s
+    // Clock tick mỗi giây - cập nhật countdown + nến live
     useEffect(() => {
-        const timer = setInterval(() => {
-            fetchCandles(false);
-        }, 10000);
-        return () => clearInterval(timer);
+        const t = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
+        return () => clearInterval(t);
+    }, []);
+
+    // Poll mỗi 10s
+    useEffect(() => {
+        const t = setInterval(() => fetchCandles(false), 10000);
+        return () => clearInterval(t);
     }, [fetchCandles]);
 
-    // Keep last candle synchronized with current price source from parent.
-    useEffect(() => {
-        const cp = currentPriceRef.current;
-        if (!cp || cp <= 0) return;
-
-        setCandles((prev) => {
-            if (prev.length === 0) return prev;
-            const aligned = alignLatestCandleWithCurrentPrice(prev);
-            if (aligned.length > 0) {
-                const first = aligned[0];
-                const last = aligned[aligned.length - 1];
-                if (first.open > 0) {
-                    setPriceChange(((last.close - first.open) / first.open) * 100);
-                }
-            }
-            return aligned;
-        });
-    }, [currentPrice, alignLatestCandleWithCurrentPrice]);
-
-    // Force immediate refresh after successful trade in parent component
+    // Refresh sau trade
     useEffect(() => {
         if (refreshKey === undefined) return;
         fetchCandles(false);
     }, [refreshKey, fetchCandles]);
 
+    // ─── Apply data to chart ──────────────────────────────────────────────────
+    useEffect(() => {
+        const live = buildLiveCandles(candles);
+        if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
+
+        if (live.length === 0) {
+            candleSeriesRef.current.setData([]);
+            volumeSeriesRef.current.setData([]);
+            setPriceChange(0);
+            return;
+        }
+
+        // Validate: đảm bảo high >= max(open,close) và low <= min(open,close)
+        // Đây là điều kiện bắt buộc để có râu nến đúng
+        const validated = live.map((c) => ({
+            ...c,
+            high: Math.max(c.high, c.open, c.close),
+            low: Math.min(c.low, c.open, c.close),
+        }));
+
+        candleSeriesRef.current.setData(validated);
+        volumeSeriesRef.current.setData(
+            validated.map((c) => ({
+                time: c.time,
+                value: c.volume ?? 0,
+                color: c.close >= c.open
+                    ? 'rgba(38, 166, 154, 0.4)'
+                    : 'rgba(239, 83, 80, 0.4)',
+            }))
+        );
+
+        const first = validated[0];
+        const last = validated[validated.length - 1];
+        if (first.open > 0) {
+            setPriceChange(((last.close - first.open) / first.open) * 100);
+        }
+
+        // Countdown overlay position
+        const y = candleSeriesRef.current.priceToCoordinate(last.close);
+        setCountdownY(typeof y === 'number' ? y : null);
+
+        if (fitPendingRef.current) {
+            chartRef.current?.timeScale().fitContent();
+            fitPendingRef.current = false;
+        }
+    }, [buildLiveCandles, candles]);
+
+    const liveCandles = buildLiveCandles(candles);
     const symbol = `${ticker.toUpperCase()}/TEST`;
     const isPositive = priceChange >= 0;
 
@@ -337,34 +410,50 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice, r
                 gap: '0.5rem',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ color: '#fff', fontWeight: '700', fontSize: '1rem', letterSpacing: '0.05em' }}>
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.05em' }}>
                         {symbol}
+                    </span>
+                    {/* Countdown badge - giống TradingView */}
+                    <span style={{
+                        color: '#9ca3af',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        background: 'rgba(148, 163, 184, 0.1)',
+                        border: '1px solid rgba(148, 163, 184, 0.18)',
+                        borderRadius: '0.3rem',
+                        padding: '0.12rem 0.4rem',
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '0.03em',
+                    }}>
+                        {interval} · {countdownLabel}
                     </span>
                     {candles.length > 1 && (
                         <span style={{
-                            color: isPositive ? '#22c55e' : '#ef4444',
+                            color: isPositive ? '#26a69a' : '#ef5350',
                             fontSize: '0.8rem',
-                            fontWeight: '600',
+                            fontWeight: 600,
                         }}>
                             {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
                         </span>
                     )}
                 </div>
 
-                {/* Interval selector */}
-                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                {/* Interval buttons */}
+                <div style={{ display: 'flex', gap: '0.2rem' }}>
                     {INTERVALS.map((iv) => (
                         <button
                             key={iv}
-                            onClick={() => setInterval(iv)}
+                            onClick={() => setIntervalState(iv)}
                             style={{
-                                padding: '0.25rem 0.6rem',
-                                fontSize: '0.75rem',
-                                fontWeight: '600',
-                                borderRadius: '0.375rem',
+                                padding: '0.22rem 0.55rem',
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                borderRadius: '0.3rem',
                                 border: 'none',
                                 cursor: 'pointer',
-                                background: interval === iv ? 'rgba(139, 92, 246, 0.4)' : 'rgba(139, 92, 246, 0.08)',
+                                background: interval === iv
+                                    ? 'rgba(139, 92, 246, 0.45)'
+                                    : 'rgba(139, 92, 246, 0.07)',
                                 color: interval === iv ? '#fff' : '#9ca3af',
                                 transition: 'all 0.15s',
                             }}
@@ -375,21 +464,47 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice, r
                 </div>
             </div>
 
-            {/* Chart */}
+            {/* Chart area */}
             <div style={{ position: 'relative' }}>
+                {/* Countdown overlay trên price line */}
+                {!loading && liveCandles.length > 0 && (
+                    <div style={{
+                        position: 'absolute',
+                        right: '0.4rem',
+                        top: countdownY !== null
+                            ? `${Math.max(4, countdownY - 10)}px`
+                            : '0.4rem',
+                        zIndex: 11,
+                        background: 'rgba(13, 17, 23, 0.85)',
+                        border: '1px solid rgba(148, 163, 184, 0.25)',
+                        color: '#cbd5e1',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.68rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.38rem',
+                        letterSpacing: '0.05em',
+                        fontVariantNumeric: 'tabular-nums',
+                        pointerEvents: 'none',
+                    }}>
+                        {countdownLabel}
+                    </div>
+                )}
+
                 {loading && (
                     <div style={{
                         position: 'absolute', inset: 0, zIndex: 10,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(13, 17, 23, 0.7)',
+                        background: 'rgba(13, 17, 23, 0.75)',
                     }}>
                         <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Loading chart...</span>
                     </div>
                 )}
-                {!loading && candles.length === 0 && (
+
+                {!loading && liveCandles.length === 0 && (
                     <div style={{
                         position: 'absolute', inset: 0, zIndex: 10,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
                         background: 'rgba(13, 17, 23, 0.85)',
                         gap: '0.5rem',
                     }}>
@@ -397,6 +512,7 @@ export default function TokenLightweightChart({ tokenId, ticker, currentPrice, r
                         <span style={{ color: '#4b5563', fontSize: '0.75rem' }}>Waiting for the first trade</span>
                     </div>
                 )}
+
                 <div ref={containerRef} style={{ width: '100%', height: '420px' }} />
             </div>
         </div>

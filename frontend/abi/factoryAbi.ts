@@ -33,8 +33,8 @@ export const TOKEN_ABI = [
   "function soldSupply() view returns (uint256)",
   "event Transfer(address indexed from, address indexed to, uint256 value)",
   "event Approval(address indexed owner, address indexed spender, uint256 value)",
-  "event TokenPurchased(address indexed buyer, uint256 amount, uint256 totalPrice, uint256 newPrice)",
-  "event TokenSold(address indexed seller, uint256 amount, uint256 totalPrice, uint256 newPrice)"
+  "event TokenPurchased(address indexed buyer, uint256 totalPrice, uint256 newPrice)",
+  "event TokenSold(address indexed seller, uint256 totalPrice, uint256 newPrice)"
 ] as const;
 
 export const FACTORY_ADDRESS = "0x6cB2b6c1cf00B2f54f75f345A021669D78952Ee3";

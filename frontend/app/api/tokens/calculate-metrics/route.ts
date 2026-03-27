@@ -111,7 +111,18 @@ export async function POST(request: NextRequest) {
 
         // Calculate Volume 24h from purchases table (total token quantity)
         const volume24hResult = await query(
-            `SELECT COALESCE(SUM(quantity), 0) as volume 
+            `SELECT COALESCE(
+                SUM(
+                    COALESCE(
+                        quantity,
+                        CASE
+                            WHEN price_per_token IS NULL OR price_per_token = 0 THEN 0
+                            ELSE total_price / price_per_token
+                        END
+                    )
+                ),
+                0
+            ) as volume 
                          FROM purchases 
                          WHERE token_id = $1
                              AND status = 'completed'

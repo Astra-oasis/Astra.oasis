@@ -221,7 +221,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       const amountWei = parseEther(amount);
 
       let tx;
-      let returnAmount = estimatedCost;
+      let returnAmount: string;
+
       if (mode === 'buy') {
         const cost = await tokenContract.getBuyPrice(amountWei);
         tx = await tokenContract.buyTokens(amountWei, { value: cost });
@@ -233,22 +234,18 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       }
 
       const receipt = await tx.wait();
-
-      // Calculate actual price_per_token from transaction
+      const txHash = receipt.hash;
       const pricePerToken = (parseFloat(returnAmount) / parseFloat(amount)).toString();
 
-      // Save to database
-      await savePurchaseToDatabase(mode, receipt.hash, amount, returnAmount, pricePerToken);
+      await savePurchaseToDatabase(mode, txHash, amount, returnAmount, pricePerToken);
 
-      // Remove processing toast and show success
       removeToast(toastId);
-      showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${amount} ${symbol}`);
+      showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${symbol}. Tx: ${txHash.slice(0, 10)}...`);
       setAmount('');
       loadBalances();
       if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Trade error:', error);
-      // Remove processing toast and show error
       removeToast(toastId);
       showToast('error', 'Transaction Failed', error.reason || error.message);
     } finally {

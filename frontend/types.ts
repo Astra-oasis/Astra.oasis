@@ -34,7 +34,7 @@ export enum ViewState {
 
 export interface Trade {
   type: 'buy' | 'sell';
-  amount: number;
+  amount?: number | null;
   price: number;
   timestamp: string;
   user: string;

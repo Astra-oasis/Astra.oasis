@@ -9,7 +9,9 @@
     "lint": "next lint",
     "init-db": "tsx scripts/init-db.ts",
     "run-migration": "tsx scripts/run-migration.ts",
-    "test-metrics": "tsx scripts/test-metrics.ts"
+    "test-metrics": "tsx scripts/test-metrics.ts",
+    "test-trade-privacy": "tsx scripts/test-trade-privacy.ts",
+    "run-private-trade-flow": "tsx scripts/run-private-trade-flow.ts"
   },
   "dependencies": {
     "@oasisprotocol/sapphire-paratime": "^2.3.0",

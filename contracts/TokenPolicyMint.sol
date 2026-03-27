@@ -19,8 +19,8 @@ contract TokenPolicyMint {
     
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
-    event TokenPurchased(address indexed buyer, uint256 amount, uint256 totalPrice, uint256 newPrice);
-    event TokenSold(address indexed seller, uint256 amount, uint256 totalPrice, uint256 newPrice);
+    event TokenPurchased(address indexed buyer, uint256 totalPrice, uint256 newPrice);
+    event TokenSold(address indexed seller, uint256 totalPrice, uint256 newPrice);
     
     constructor(
         string memory _name,
@@ -106,8 +106,7 @@ contract TokenPolicyMint {
             require(success, "Refund failed");
         }
         
-        emit Transfer(address(this), msg.sender, amount);
-        emit TokenPurchased(msg.sender, amount, totalPrice, getCurrentPrice());
+        emit TokenPurchased(msg.sender, totalPrice, getCurrentPrice());
     }
     
     function sellTokens(uint256 amount) external {
@@ -127,8 +126,7 @@ contract TokenPolicyMint {
         (bool success, ) = payable(msg.sender).call{value: totalPrice}("");
         require(success, "Transfer failed");
         
-        emit Transfer(msg.sender, address(this), amount);
-        emit TokenSold(msg.sender, amount, totalPrice, getCurrentPrice());
+        emit TokenSold(msg.sender, totalPrice, getCurrentPrice());
     }
     
     function setSaleStatus(bool _isForSale) external onlyCreator {
@@ -157,7 +155,6 @@ contract TokenPolicyMint {
         balanceOf[msg.sender] -= amount;
         balanceOf[to] += amount;
         
-        emit Transfer(msg.sender, to, amount);
         return true;
     }
     
@@ -175,7 +172,6 @@ contract TokenPolicyMint {
         balanceOf[to] += amount;
         allowance[from][msg.sender] -= amount;
         
-        emit Transfer(from, to, amount);
         return true;
     }
 }

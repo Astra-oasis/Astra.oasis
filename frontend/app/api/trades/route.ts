@@ -13,7 +13,21 @@ export async function GET(request: NextRequest) {
         }
 
         const result = await query(
-            `SELECT * FROM purchases WHERE token_id = $1 ORDER BY created_at DESC LIMIT 50`,
+                        `SELECT
+                                id,
+                                token_id,
+                                buyer_address,
+                                seller_address,
+                                CASE WHEN buyer_address IS NOT NULL THEN 'buy' ELSE 'sell' END AS trade_type,
+                                price_per_token,
+                                total_price,
+                                created_at,
+                                transaction_hash
+                         FROM purchases
+                         WHERE token_id = $1
+                             AND status = 'completed'
+                         ORDER BY created_at DESC
+                         LIMIT 50`,
             [tokenId]
         );
 

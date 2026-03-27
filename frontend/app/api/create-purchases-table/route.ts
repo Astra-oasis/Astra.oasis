@@ -11,9 +11,12 @@ export async function GET(request: NextRequest) {
         CREATE TABLE IF NOT EXISTS purchases (
           id SERIAL PRIMARY KEY,
           token_id INTEGER NOT NULL REFERENCES tokens(id) ON DELETE CASCADE,
-          buyer_address VARCHAR(255) NOT NULL,
+                    buyer_address VARCHAR(255),
           seller_address VARCHAR(255),
-          quantity BIGINT NOT NULL,
+                    quantity NUMERIC(36, 18),
+                    quantity_ciphertext TEXT,
+                    is_private BOOLEAN NOT NULL DEFAULT FALSE,
+                    visibility_source VARCHAR(20) NOT NULL DEFAULT 'public',
           price_per_token NUMERIC(36, 18) NOT NULL,
           total_price NUMERIC(36, 18) NOT NULL,
           transaction_hash VARCHAR(255),
@@ -28,6 +31,7 @@ export async function GET(request: NextRequest) {
         CREATE INDEX IF NOT EXISTS idx_purchases_token_id ON purchases(token_id);
         CREATE INDEX IF NOT EXISTS idx_purchases_buyer ON purchases(buyer_address);
         CREATE INDEX IF NOT EXISTS idx_purchases_seller ON purchases(seller_address);
+                CREATE INDEX IF NOT EXISTS idx_purchases_is_private ON purchases(is_private);
       `);
 
             return NextResponse.json({

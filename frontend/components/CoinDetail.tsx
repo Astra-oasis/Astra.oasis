@@ -106,11 +106,11 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
       const data = await response.json();
       if (data.success && data.data) {
         const formattedTrades: Trade[] = data.data.map((purchase: any) => ({
-          type: purchase.type_name || 'buy',
-          amount: parseFloat(purchase.amount) || 0,
-          price: parseFloat(purchase.price) || 0,
+          type: purchase.trade_type === 'sell' ? 'sell' : 'buy',
+          amount: null,
+          price: parseFloat(purchase.price_per_token) || 0,
           timestamp: new Date(purchase.created_at).getTime().toString(),
-          user: purchase.user_address || '0x...'
+          user: purchase.buyer_address || purchase.seller_address || '0x...'
         }));
         setLiveTrades(formattedTrades);
       }

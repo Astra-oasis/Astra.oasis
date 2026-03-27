@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 
+// Bonding curve slope: price tăng 1e13 wei mỗi 1 token (1e18 units)
+// => slope per token unit = 1e13 / 1e18 = 0.00001 ROSE/token
+const SLOPE = 0.00001;
+
+/**
+ * Từ avgPrice và quantity, tính startPrice và endPrice của giao dịch
+ * Bonding curve linear: price = base + soldSupply * slope
+ * avgPrice = (startPrice + endPrice) / 2
+ * endPrice = startPrice + quantity * slope
+ * => startPrice = avgPrice - (quantity * slope) / 2
+ * => endPrice   = avgPrice + (quantity * slope) / 2
+ */
+function calcPriceRange(avgPrice: number, quantity: number, isBuy: boolean): { lo: number; hi: number } {
+    const half = (quantity * SLOPE) / 2;
+    const start = avgPrice - half;
+    const end = avgPrice + half;
+    // buy: price đi từ start lên end (tăng)
+    // sell: price đi từ start xuống end (giảm)
+    return {
+        lo: Math.min(start, end, avgPrice),
+        hi: Math.max(start, end, avgPrice),
+    };
+}
+
 export async function GET(request: NextRequest) {
     try {
         const tokenId = request.nextUrl.searchParams.get('tokenId');
@@ -10,43 +34,87 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Missing tokenId' }, { status: 400 });
         }
 
-        // Map interval to seconds for grouping
         const intervalSeconds: Record<string, number> = {
-            '1m': 60,
-            '5m': 300,
-            '15m': 900,
-            '1h': 3600,
-            '4h': 14400,
-            '1d': 86400,
+            '1m': 60, '5m': 300, '15m': 900,
+            '1h': 3600, '4h': 14400, '1d': 86400,
         };
         const secs = intervalSeconds[interval] ?? 300;
 
-        // Group purchases into OHLCV candles using epoch bucketing
+        // Lấy từng giao dịch riêng lẻ để tính high/low chính xác
         const result = await query(
             `SELECT
                 (FLOOR(EXTRACT(EPOCH FROM created_at) / $2) * $2)::bigint AS bucket,
-                (array_agg(price_per_token::float ORDER BY created_at ASC))[1]  AS open,
-                MAX(price_per_token::float)                                      AS high,
-                MIN(price_per_token::float)                                      AS low,
-                (array_agg(price_per_token::float ORDER BY created_at DESC))[1] AS close,
-                SUM(quantity::float)                                             AS volume
+                price_per_token::float                                      AS avg_price,
+                COALESCE(
+                    quantity::float,
+                    CASE
+                        WHEN price_per_token::float = 0 THEN 0
+                        ELSE total_price::float / price_per_token::float
+                    END
+                )                                                           AS qty,
+                total_price::float                                          AS total_price,
+                buyer_address,
+                created_at
              FROM purchases
              WHERE token_id = $1
                AND price_per_token IS NOT NULL
                AND price_per_token::float > 0
-             GROUP BY bucket
-             ORDER BY bucket ASC`,
+               AND status = 'completed'
+             ORDER BY created_at ASC`,
             [tokenId, secs]
         );
 
-        const candles = result.rows.map((row: any) => ({
-            time: parseInt(row.bucket),
-            open: parseFloat(row.open),
-            high: parseFloat(row.high),
-            low: parseFloat(row.low),
-            close: parseFloat(row.close),
-            volume: parseFloat(row.volume),
-        }));
+        if (result.rows.length === 0) {
+            return NextResponse.json({ success: true, data: [] });
+        }
+
+        // Group theo bucket, tính OHLCV với high/low có wick
+        const bucketMap = new Map<number, {
+            open: number; close: number;
+            high: number; low: number; volume: number;
+        }>();
+
+        for (const row of result.rows) {
+            const bucket = parseInt(row.bucket);
+            const avgPrice = parseFloat(row.avg_price);
+            const qty = parseFloat(row.qty) || 0;
+            const isBuy = !!row.buyer_address;
+
+            // Tính range giá thực tế của giao dịch này (có wick)
+            const { lo, hi } = calcPriceRange(avgPrice, qty, isBuy);
+
+            // startPrice = giá trước khi giao dịch, endPrice = giá sau
+            const startPrice = isBuy ? lo : hi;
+            const endPrice   = isBuy ? hi : lo;
+
+            if (!bucketMap.has(bucket)) {
+                bucketMap.set(bucket, {
+                    open: startPrice,
+                    close: endPrice,
+                    high: hi,
+                    low: lo,
+                    volume: qty,
+                });
+            } else {
+                const b = bucketMap.get(bucket)!;
+                b.high = Math.max(b.high, hi);
+                b.low = Math.min(b.low, lo);
+                b.volume += qty;
+                b.close = endPrice; // close = endPrice của tx cuối cùng
+            }
+        }
+
+        // Sort và build candles
+        const candles = Array.from(bucketMap.entries())
+            .sort(([a], [b]) => a - b)
+            .map(([bucket, c]) => ({
+                time: bucket,
+                open: c.open,
+                high: c.high,
+                low: c.low,
+                close: c.close,
+                volume: c.volume,
+            }));
 
         return NextResponse.json({ success: true, data: candles });
     } catch (error) {
