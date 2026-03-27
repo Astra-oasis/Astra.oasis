@@ -466,29 +466,6 @@ export default function TokenLightweightChart({
 
             {/* Chart area */}
             <div style={{ position: 'relative' }}>
-                {/* Countdown overlay trên price line */}
-                {!loading && liveCandles.length > 0 && (
-                    <div style={{
-                        position: 'absolute',
-                        right: '0.4rem',
-                        top: countdownY !== null
-                            ? `${Math.max(4, countdownY - 10)}px`
-                            : '0.4rem',
-                        zIndex: 11,
-                        background: 'rgba(13, 17, 23, 0.85)',
-                        border: '1px solid rgba(148, 163, 184, 0.25)',
-                        color: '#cbd5e1',
-                        borderRadius: '0.25rem',
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        padding: '0.15rem 0.38rem',
-                        letterSpacing: '0.05em',
-                        fontVariantNumeric: 'tabular-nums',
-                        pointerEvents: 'none',
-                    }}>
-                        {countdownLabel}
-                    </div>
-                )}
 
                 {loading && (
                     <div style={{
