@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { CheckCircle2, XCircle, Loader2, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'processing';
@@ -17,6 +17,7 @@ interface ToastProps {
 
 const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Trigger entrance animation
@@ -24,6 +25,11 @@ const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
 
     // Auto dismiss for success and error
     if (toast.type !== 'processing') {
+      // Animate progress bar
+      if (progressRef.current) {
+        progressRef.current.style.width = '0%';
+      }
+
       const timer = setTimeout(() => {
         setIsVisible(false);
         // Wait for exit animation to finish before removing from DOM
@@ -91,15 +97,9 @@ const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
       {toast.type !== 'processing' && isVisible && (
         <div className="h-0.5 w-full bg-gray-800">
            <div 
-             className={`h-full ${toast.type === 'success' ? 'bg-pump-green' : 'bg-pump-red'} transition-all ease-linear duration-[3000ms] w-full`} 
-             style={{ width: '0%', transitionDuration: '3000ms' }}
-             ref={(el) => {
-                 if (el) {
-                   setTimeout(() => {
-                     el.style.width = '100%';
-                   }, 50);
-                 }
-             }}
+             ref={progressRef}
+             className={`h-full ${toast.type === 'success' ? 'bg-pump-green' : 'bg-pump-red'} transition-all ease-linear`} 
+             style={{ width: '100%', transitionDuration: '3000ms' }}
            />
         </div>
       )}

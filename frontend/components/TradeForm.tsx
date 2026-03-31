@@ -240,7 +240,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       await savePurchaseToDatabase(mode, txHash, amount, returnAmount, pricePerToken);
 
       removeToast(toastId);
-      showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Bought' : 'Sold'} ${symbol}. Tx: ${txHash.slice(0, 10)}...`);
+      showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Buy' : 'Sell'} ${amount} ${symbol}`);
       setAmount('');
       loadBalances();
       if (onSuccess) onSuccess();

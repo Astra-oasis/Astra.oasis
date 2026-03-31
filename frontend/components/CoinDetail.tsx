@@ -19,7 +19,7 @@ import { TOKEN_ABI } from '../abi/factoryAbi';
 interface CoinDetailProps {
   coin: Coin;
   onBack: () => void;
-  showToast: (type: ToastMessage['type'], title: string, message: string) => void;
+  showToast: (type: ToastMessage['type'], title: string, message: string) => string;
   removeToast: (id: string) => void;
 }
 
