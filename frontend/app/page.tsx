@@ -31,6 +31,7 @@ export default function Home() {
   const addToast = (type: ToastMessage['type'], title: string, message: string) => {
     const id = Date.now().toString();
     setToasts((prev) => [...prev, { id, type, title, message }]);
+    return id;
   };
 
   const removeToast = (id: string) => {

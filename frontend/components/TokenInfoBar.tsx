@@ -12,7 +12,7 @@ interface TokenInfoBarProps {
 const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride }) => {
     const [metrics, setMetrics] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const OASIS_EXPLORER_URL = 'https://explorer.sapphire.oasis.io/address';
+    const OASIS_EXPLORER_URL = 'https://testnet.explorer.sapphire.oasis.io/address';
 
     useEffect(() => {
         const fetchMetrics = async () => {
