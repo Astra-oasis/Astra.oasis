@@ -62,6 +62,25 @@ export async function POST(request: NextRequest) {
             ]
         );
 
+        // If this is a buy, update bonding progress (only increases, never decreases on sell)
+        if (buyer_address) {
+            await query(`
+                CREATE TABLE IF NOT EXISTS token_bonding_progress (
+                    token_id    INTEGER PRIMARY KEY REFERENCES tokens(id) ON DELETE CASCADE,
+                    max_reserve NUMERIC(30, 18) NOT NULL DEFAULT 0,
+                    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            await query(
+                `INSERT INTO token_bonding_progress (token_id, max_reserve, updated_at)
+                 VALUES ($1, $2::NUMERIC, NOW())
+                 ON CONFLICT (token_id) DO UPDATE
+                   SET max_reserve = token_bonding_progress.max_reserve + $2::NUMERIC,
+                       updated_at  = NOW()`,
+                [token_id, total_price]
+            );
+        }
+
         return NextResponse.json({ success: true, data: result.rows[0] });
     } catch (error) {
         console.error('Error creating purchase:', error);

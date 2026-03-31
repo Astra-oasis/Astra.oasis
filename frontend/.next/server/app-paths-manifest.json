@@ -1,10 +1,9 @@
 {
-  "/api/ohlcv/route": "app/api/ohlcv/route.js",
   "/page": "app/page.js",
-  "/api/tokens/update-metrics/route": "app/api/tokens/update-metrics/route.js",
   "/api/bonding-progress/route": "app/api/bonding-progress/route.js",
-  "/api/tokens/route": "app/api/tokens/route.js",
+  "/api/tokens/update-metrics/route": "app/api/tokens/update-metrics/route.js",
+  "/api/trades/route": "app/api/trades/route.js",
   "/api/tokens/calculate-metrics/route": "app/api/tokens/calculate-metrics/route.js",
-  "/api/comments/route": "app/api/comments/route.js",
-  "/api/trades/route": "app/api/trades/route.js"
+  "/api/ohlcv/route": "app/api/ohlcv/route.js",
+  "/api/comments/route": "app/api/comments/route.js"
 }
