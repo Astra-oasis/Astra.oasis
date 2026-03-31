@@ -26,17 +26,17 @@ interface CoinDetailProps {
 }
 
 const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, removeToast }) => {
-  const [comments, setComments]       = useState<Comment[]>([]);
-  const [liveTrades, setLiveTrades]   = useState<Trade[]>([]);
-  const [tokenData, setTokenData]     = useState<Coin & { reserveBalance?: number }>(coin as any);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [liveTrades, setLiveTrades] = useState<Trade[]>([]);
+  const [tokenData, setTokenData] = useState<Coin & { reserveBalance?: number }>(coin as any);
   const [tokenMetrics, setTokenMetrics] = useState<any>(null);
   const [chartRefreshKey, setChartRefreshKey] = useState(0);
 
   // Bonding progress state — separate so it updates instantly on buy
-  const [maxReserve, setMaxReserve]   = useState<number>(0);
-  const maxReserveRef                 = useRef<number>(0); // sync ref for optimistic update
+  const [maxReserve, setMaxReserve] = useState<number>(0);
+  const maxReserveRef = useRef<number>(0); // sync ref for optimistic update
 
-  const progress     = Math.min(100, (maxReserve / BONDING_TARGET) * 100);
+  const progress = Math.min(100, (maxReserve / BONDING_TARGET) * 100);
   const pctRemaining = (100 - progress).toFixed(2);
 
   const getProvider = async () => {
@@ -51,7 +51,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   const loadBondingProgress = async () => {
     if (!coin.id) return;
     try {
-      const res  = await fetch(`/api/bonding-progress?tokenId=${coin.id}`);
+      const res = await fetch(`/api/bonding-progress?tokenId=${coin.id}`);
       const data = await res.json();
       if (data.success) {
         const val = parseFloat(data.data.max_reserve) || 0;
@@ -65,14 +65,14 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   const loadRealTokenData = async () => {
     if (!coin.tokenAddress || !window.ethereum) return;
     try {
-      const provider      = await getProvider();
+      const provider = await getProvider();
       const tokenContract = new Contract(coin.tokenAddress, TOKEN_ABI, provider);
       const [price, sold] = await Promise.all([
         tokenContract.getCurrentPrice(),
         tokenContract.soldSupply(),
       ]);
       const priceEth = parseFloat(formatEther(price));
-      const soldEth  = parseFloat(formatEther(sold));
+      const soldEth = parseFloat(formatEther(sold));
       setTokenData(prev => ({
         ...prev,
         marketCap: soldEth * priceEth * 1_000_000,
@@ -91,7 +91,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
     if (!coin.tokenAddress) return;
     try {
       const resolvedPrice = currentPrice ?? tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price;
-      const res  = await fetch('/api/tokens/calculate-metrics', {
+      const res = await fetch('/api/tokens/calculate-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token_address: coin.tokenAddress, current_price: resolvedPrice }),
@@ -104,15 +104,16 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   const fetchRealTrades = async () => {
     if (!coin.id) return;
     try {
-      const res  = await fetch(`/api/trades?tokenId=${coin.id}`);
+      const res = await fetch(`/api/trades?tokenId=${coin.id}`);
       const data = await res.json();
       if (data.success && data.data) {
         setLiveTrades(data.data.map((p: any) => ({
-          type:      p.trade_type === 'sell' ? 'sell' : 'buy',
-          amount:    null,
-          price:     parseFloat(p.price_per_token) || 0,
-          timestamp: new Date(p.created_at).getTime().toString(),
-          user:      p.buyer_address || p.seller_address || '0x...',
+          type: p.trade_type === 'sell' ? 'sell' : 'buy',
+          amount: null,
+          price: parseFloat(p.price_per_token) || 0,
+          timestamp: p.created_at,
+          user: p.buyer_address || p.seller_address || '0x...',
+          txHash: p.transaction_hash || null,
         })));
       }
     } catch { /* silent */ }
@@ -121,15 +122,15 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   const fetchRealComments = async () => {
     if (!coin.id) return;
     try {
-      const res  = await fetch(`/api/comments?tokenId=${coin.id}`);
+      const res = await fetch(`/api/comments?tokenId=${coin.id}`);
       const data = await res.json();
       if (data.success && data.data) {
         setComments(data.data.map((c: any) => ({
-          id:        c.id.toString(),
-          user:      c.user_address || 'Anonymous',
-          text:      c.comment_text || '',
+          id: c.id.toString(),
+          user: c.user_address || 'Anonymous',
+          text: c.comment_text || '',
           timestamp: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type:      'chat',
+          type: 'chat',
         })));
       }
     } catch { /* silent */ }
@@ -143,8 +144,8 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
     fetchRealTrades();
     fetchRealComments();
 
-    const priceInterval   = setInterval(loadRealTokenData,    5_000);
-    const metricsInterval = setInterval(loadTokenMetrics,    10_000);
+    const priceInterval = setInterval(loadRealTokenData, 5_000);
+    const metricsInterval = setInterval(loadTokenMetrics, 10_000);
     const progressInterval = setInterval(loadBondingProgress, 15_000);
 
     return () => {
@@ -165,11 +166,11 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
       if (res.ok) {
         const data = await res.json();
         setComments(prev => [...prev, {
-          id:        data.data.id.toString(),
-          user:      data.data.user_address || 'You',
-          text:      data.data.comment_text,
+          id: data.data.id.toString(),
+          user: data.data.user_address || 'You',
+          text: data.data.comment_text,
           timestamp: new Date(data.data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type:      'chat',
+          type: 'chat',
         }]);
       }
     } catch { /* silent */ }

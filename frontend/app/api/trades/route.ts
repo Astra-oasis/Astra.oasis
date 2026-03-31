@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
         }
 
         const result = await query(
-                        `SELECT
+            `SELECT
                                 id,
                                 token_id,
                                 buyer_address,

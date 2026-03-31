@@ -38,6 +38,7 @@ export interface Trade {
   price: number;
   timestamp: string;
   user: string;
+  txHash?: string | null;
 }
 
 export type SortOption = 'featured' | 'marketCap' | 'lastReply' | 'creationTime';
