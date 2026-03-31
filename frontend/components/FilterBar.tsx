@@ -14,26 +14,15 @@ const FilterBar: React.FC<FilterBarProps> = ({ currentSort, onSortChange }) => {
         <button className="px-4 py-1 text-gray-400 hover:text-white text-xs font-bold">Terminal</button>
       </div>
 
-      <div className="flex gap-4 sm:ml-auto">
-        <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="accent-blue-500" />
-            <span className="text-gray-400">Animations</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="accent-blue-500" defaultChecked />
-            <span className="text-gray-400">Include NSFW</span>
-        </label>
-      </div>
-      
-      <select 
+      <select
         value={currentSort}
         onChange={(e) => onSortChange(e.target.value as SortOption)}
-        className="bg-pump-card border border-gray-800 text-white text-xs rounded p-2 outline-none w-full sm:w-auto focus:border-blue-500"
+        className="bg-pump-card border border-gray-800 text-white text-xs rounded p-2 outline-none sm:ml-auto w-full sm:w-auto focus:border-blue-500"
       >
+        <option value="creationTime">Sort: Creation Time</option>
         <option value="featured">Sort: Featured</option>
         <option value="marketCap">Sort: MC</option>
         <option value="lastReply">Sort: Last Reply</option>
-        <option value="creationTime">Sort: Creation Time</option>
       </select>
     </div>
   );

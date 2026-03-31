@@ -20,7 +20,7 @@ const SupportPage = dynamic(() => import('../components/SupportPage'), { ssr: fa
 export default function Home() {
   const [viewState, setViewState] = useState<ViewState>(ViewState.GRID);
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>('featured');
+  const [sortOption, setSortOption] = useState<SortOption>('creationTime');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState('');
