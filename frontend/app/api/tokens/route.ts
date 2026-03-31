@@ -40,15 +40,26 @@ export async function GET(request: NextRequest) {
     try {
         const owner = request.nextUrl.searchParams.get('owner');
 
-        let sql = 'SELECT * FROM tokens ORDER BY created_at DESC';
-        const params = [];
+        let sql = `
+            SELECT t.*, COALESCE(bp.max_reserve, 0) AS max_reserve
+            FROM tokens t
+            LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
+            ORDER BY t.created_at DESC
+        `;
+        const params: any[] = [];
 
         if (owner) {
-            sql = 'SELECT * FROM tokens WHERE owner = $1 ORDER BY created_at DESC';
+            sql = `
+                SELECT t.*, COALESCE(bp.max_reserve, 0) AS max_reserve
+                FROM tokens t
+                LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
+                WHERE t.owner = $1
+                ORDER BY t.created_at DESC
+            `;
             params.push(owner);
         }
 
-        const result = await query(sql, params);
+        const result = await query(sql, params.length > 0 ? params : undefined);
 
         return NextResponse.json({
             success: true,

@@ -70,22 +70,26 @@ export default function Home() {
       const data = await response.json();
 
       if (data.success && data.data) {
-        const formattedTokens: Coin[] = data.data.map((token: any, idx: number) => ({
-          id: String(token.id ?? idx),
-          name: token.name,
-          ticker: token.symbol,
-          description: token.description || `Token created on Oasis Sapphire`,
-          imageUrl: token.image_url || `https://picsum.photos/200/200?random=${idx + 500}`,
-          creator: token.owner,
-          marketCap: parseFloat(token.marketcap) || 0,
-          replies: 0,
-          bondingCurveProgress: 0,
-          createdAt: new Date(token.created_at).getTime(),
-          lastReply: new Date(token.created_at).getTime(),
-          priceHistory: [],
-          tokenAddress: token.contract_address,
-          contractAddress: token.contract_address
-        }));
+        const formattedTokens: Coin[] = data.data.map((token: any, idx: number) => {
+          const maxReserve = parseFloat(token.max_reserve) || 0;
+          const bondingCurveProgress = Math.min(100, (maxReserve / 10000) * 100);
+          return {
+            id: String(token.id ?? idx),
+            name: token.name,
+            ticker: token.symbol,
+            description: token.description || `Token created on Oasis Sapphire`,
+            imageUrl: token.image_url || `https://picsum.photos/200/200?random=${idx + 500}`,
+            creator: token.owner,
+            marketCap: parseFloat(token.marketcap) || 0,
+            replies: 0,
+            bondingCurveProgress,
+            createdAt: new Date(token.created_at).getTime(),
+            lastReply: new Date(token.created_at).getTime(),
+            priceHistory: [],
+            tokenAddress: token.contract_address,
+            contractAddress: token.contract_address
+          };
+        });
         setRealTokens(formattedTokens);
       } else {
         setRealTokens([]);
