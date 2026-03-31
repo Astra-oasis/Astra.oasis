@@ -10,6 +10,7 @@ interface HeaderProps {
   onGoCreate: () => void;
   onGoLivestreams: () => void;
   onGoSupport: () => void;
+  onGoProfile: () => void;
   onConnectWallet: () => void;
   onDisconnectWallet?: () => void;
   walletConnected: boolean;
@@ -22,6 +23,7 @@ const Header: React.FC<HeaderProps> = ({
   onGoCreate,
   onGoLivestreams,
   onGoSupport,
+  onGoProfile,
   onConnectWallet,
   onDisconnectWallet,
   walletConnected,
@@ -30,6 +32,30 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [walletInfo, setWalletInfo] = useState<any>(null);
+
+  // Fetch wallet info when connected
+  React.useEffect(() => {
+    if (walletConnected && walletAddress) {
+      fetchWalletInfo();
+    }
+  }, [walletConnected, walletAddress]);
+
+
+
+  const fetchWalletInfo = async () => {
+    try {
+      const res = await fetch(`/api/wallets?address=${walletAddress}`);
+      const data = await res.json();
+      if (data.success && data.wallet) {
+        setWalletInfo(data.wallet);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet info:', error);
+    }
+  };
+
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-800 bg-pump-bg/95 backdrop-blur supports-[backdrop-filter]:bg-pump-bg/60">
@@ -117,11 +143,16 @@ const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <div className="flex items-center gap-3 cursor-pointer" onClick={() => setWalletMenuOpen(!walletMenuOpen)}>
                 <div className="hidden md:flex flex-col items-end mr-2">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Connected</span>
-                  <span className="text-xs font-mono text-pump-green">{walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}</span>
+                  <span className="text-sm font-bold text-white">
+                    {walletInfo?.display_name || 'User'}
+                  </span>
                 </div>
-                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-pump-accent to-blue-500 border-2 border-gray-800 flex items-center justify-center text-white font-bold hover:scale-105 transition-transform">
-                  {walletAddress?.slice(2, 4).toUpperCase()}
+                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-pump-accent to-blue-500 border-2 border-gray-800 flex items-center justify-center text-white font-bold hover:scale-105 transition-transform overflow-hidden">
+                  {walletInfo?.avatar_url ? (
+                    <img src={walletInfo.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    walletInfo?.display_name?.[0]?.toUpperCase() || 'U'
+                  )}
                 </div>
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${walletMenuOpen ? 'rotate-180' : ''}`} />
               </div>
@@ -129,10 +160,16 @@ const Header: React.FC<HeaderProps> = ({
               {/* Wallet Dropdown Menu */}
               {walletMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-pump-card border border-gray-800 rounded-lg shadow-xl z-50 overflow-hidden">
-                  <div className="p-3 border-b border-gray-800">
-                    <div className="text-xs text-gray-500 mb-1">Connected Wallet</div>
-                    <div className="text-sm font-mono text-white break-all">{walletAddress}</div>
-                  </div>
+                  <button
+                    onClick={() => {
+                      onGoProfile();
+                      setWalletMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-pump-green hover:bg-pump-green/10 transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Profile</span>
+                  </button>
                   <button
                     onClick={() => {
                       if (onDisconnectWallet) {
@@ -143,7 +180,7 @@ const Header: React.FC<HeaderProps> = ({
                     className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>Disconnect Wallet</span>
+                    <span>Sign out</span>
                   </button>
                 </div>
               )}

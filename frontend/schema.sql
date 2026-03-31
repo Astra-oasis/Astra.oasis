@@ -52,6 +52,21 @@ CREATE TABLE IF NOT EXISTS purchases (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create wallets table to store wallet/user information
+CREATE TABLE IF NOT EXISTS wallets (
+  id SERIAL PRIMARY KEY,
+  wallet_address VARCHAR(255) NOT NULL UNIQUE,
+  display_name VARCHAR(255),
+  avatar_url VARCHAR(255),
+  bio TEXT,
+  -- Array fields to track owned and minted coins
+  owned_coins TEXT[] DEFAULT ARRAY[]::TEXT[],
+  minted_coins TEXT[] DEFAULT ARRAY[]::TEXT[],
+  -- Timestamp tracking
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner);
 CREATE INDEX IF NOT EXISTS idx_tokens_contract_address ON tokens(contract_address);
@@ -62,4 +77,6 @@ CREATE INDEX IF NOT EXISTS idx_purchases_token_id ON purchases(token_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_buyer ON purchases(buyer_address);
 CREATE INDEX IF NOT EXISTS idx_purchases_seller ON purchases(seller_address);
 CREATE INDEX IF NOT EXISTS idx_purchases_is_private ON purchases(is_private);
+CREATE INDEX IF NOT EXISTS idx_wallets_address ON wallets(wallet_address);
+CREATE INDEX IF NOT EXISTS idx_wallets_display_name ON wallets(display_name);
 

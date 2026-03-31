@@ -103,8 +103,24 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
   };
 
   const handleCreate = async () => {
-    if (!form.name || !form.symbol) {
-      alert('Vui lòng nhập tên và ticker!');
+    // Validation checks
+    if (!form.name || !form.name.trim()) {
+      alert('❌ Vui lòng nhập tên token!');
+      return;
+    }
+
+    if (!form.symbol || !form.symbol.trim()) {
+      alert('❌ Vui lòng nhập ticker!');
+      return;
+    }
+
+    if (!form.description || !form.description.trim()) {
+      alert('❌ Vui lòng nhập mô tả token!');
+      return;
+    }
+
+    if (!form.imageUrl || !form.imageUrl.trim()) {
+      alert('❌ Vui lòng upload ảnh token trước khi deploy!');
       return;
     }
 
@@ -269,17 +285,18 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Description</label>
+              <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Description <span className="text-red-400">*</span></label>
               <textarea
                 placeholder="Tell the world why this token will flip ETH..."
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 className="w-full rounded-lg bg-gray-900 border border-gray-700 p-3 text-white focus:border-blue-500 outline-none h-32 transition-colors resize-none"
               />
+              <p className="text-xs text-gray-500 mt-1">{form.description.length} characters</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Token Image</label>
+              <label className="block text-xs font-bold text-blue-400 uppercase mb-2">Token Image <span className="text-red-400">*</span></label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -293,7 +310,11 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
                 onDragLeave={handleDragDrop}
                 onDrop={handleDragDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-700 rounded-lg p-10 flex flex-col items-center justify-center text-gray-500 hover:border-blue-500 hover:text-blue-500 cursor-pointer transition-all bg-gray-900/50"
+                className={`border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center cursor-pointer transition-all bg-gray-900/50 ${
+                  form.imageUrl 
+                    ? 'border-green-500/50' 
+                    : 'border-gray-700 hover:border-blue-500 hover:text-blue-500'
+                } ${!form.imageUrl && 'text-gray-500'}`}
               >
                 {uploading ? (
                   <>
@@ -359,7 +380,7 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
             </button>
             <button
               onClick={handleCreate}
-              disabled={loading}
+              disabled={loading || !form.imageUrl || !form.name.trim() || !form.symbol.trim() || !form.description.trim()}
               className="flex-[2] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-lg text-lg uppercase tracking-wide shadow-lg shadow-blue-900/50 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}

@@ -11,11 +11,13 @@ import { Coin, ViewState, SortOption } from '../types';
 import { BrowserProvider, Contract } from 'ethers';
 import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
 import { FACTORY_ABI, FACTORY_ADDRESS } from '../abi/factoryAbi';
+import { saveWalletInfo } from '../lib/walletHelper';
 
 const CoinDetail = dynamic(() => import('../components/CoinDetail'), { ssr: false });
 const CreateCoinPage = dynamic(() => import('../components/CreateCoinPage'), { ssr: false });
 const LivestreamsPage = dynamic(() => import('../components/LivestreamsPage'), { ssr: false });
 const SupportPage = dynamic(() => import('../components/SupportPage'), { ssr: false });
+const ProfilePage = dynamic(() => import('../components/ProfilePage'), { ssr: false });
 
 export default function Home() {
   const [viewState, setViewState] = useState<ViewState>(ViewState.GRID);
@@ -60,6 +62,10 @@ export default function Home() {
 
   const handleGoSupport = () => {
     setViewState(ViewState.SUPPORT);
+  };
+
+  const handleGoProfile = () => {
+    setViewState(ViewState.PROFILE);
   };
 
   const fetchRealTokens = async () => {
@@ -140,9 +146,19 @@ export default function Home() {
           method: 'eth_requestAccounts',
         });
         if (accounts.length > 0) {
+          const walletAddress = accounts[0];
           setConnected(true);
-          setAddress(accounts[0]);
-          addToast('success', 'Wallet Connected', `Connected to ${accounts[0].slice(0, 6)}...`);
+          setAddress(walletAddress);
+          
+          // Save wallet to database
+          try {
+            await saveWalletInfo(walletAddress);
+            console.log('✅ Wallet saved to database');
+          } catch (error) {
+            console.error('Failed to save wallet to database:', error);
+          }
+          
+          addToast('success', 'Wallet Connected', `Connected to ${walletAddress.slice(0, 6)}...`);
         }
       } catch (error) {
         addToast('error', 'Connection Failed', 'Failed to connect wallet.');
@@ -165,8 +181,17 @@ export default function Home() {
           method: 'eth_accounts',
         });
         if (accounts.length > 0) {
+          const walletAddress = accounts[0];
           setConnected(true);
-          setAddress(accounts[0]);
+          setAddress(walletAddress);
+          
+          // Save wallet to database when auto-connecting
+          try {
+            await saveWalletInfo(walletAddress);
+            console.log('✅ Wallet auto-saved to database');
+          } catch (error) {
+            console.error('Failed to auto-save wallet:', error);
+          }
         }
       }
     };
@@ -180,6 +205,7 @@ export default function Home() {
         onGoCreate={handleGoCreate}
         onGoLivestreams={handleGoLivestreams}
         onGoSupport={handleGoSupport}
+        onGoProfile={handleGoProfile}
         onConnectWallet={handleConnectWallet}
         onDisconnectWallet={handleDisconnectWallet}
         walletConnected={connected}
@@ -241,6 +267,13 @@ export default function Home() {
 
         {viewState === ViewState.SUPPORT && (
           <SupportPage />
+        )}
+
+        {viewState === ViewState.PROFILE && address && (
+          <ProfilePage
+            walletAddress={address}
+            onBack={handleGoHome}
+          />
         )}
       </main>
     </div>

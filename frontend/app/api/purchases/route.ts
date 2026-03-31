@@ -77,7 +77,9 @@ export async function GET(request: NextRequest) {
         const tokenId = request.nextUrl.searchParams.get('token_id');
         const buyerAddress = request.nextUrl.searchParams.get('buyer_address');
         const sellerAddress = request.nextUrl.searchParams.get('seller_address');
+        const contractAddress = request.nextUrl.searchParams.get('contract_address');
         const status = request.nextUrl.searchParams.get('status');
+        const walletAddress = request.nextUrl.searchParams.get('wallet_address');
 
         const params: any[] = [];
         const conditions: string[] = [];
@@ -87,23 +89,32 @@ export async function GET(request: NextRequest) {
             params.push(parseInt(tokenId));
         }
         if (buyerAddress) {
-            conditions.push(`p.buyer_address = $${params.length + 1}`);
+            conditions.push(`LOWER(p.buyer_address) = LOWER($${params.length + 1})`);
             params.push(buyerAddress);
         }
         if (sellerAddress) {
-            conditions.push(`p.seller_address = $${params.length + 1}`);
+            conditions.push(`LOWER(p.seller_address) = LOWER($${params.length + 1})`);
             params.push(sellerAddress);
         }
         if (status) {
             conditions.push(`p.status = $${params.length + 1}`);
             params.push(status);
         }
+        if (contractAddress) {
+            conditions.push(`LOWER(t.contract_address) = LOWER($${params.length + 1})`);
+            params.push(contractAddress);
+        }
+        // For convenience, if wallet_address is provided, use it as buyer_address
+        if (walletAddress && !buyerAddress) {
+            conditions.push(`LOWER(p.buyer_address) = LOWER($${params.length + 1})`);
+            params.push(walletAddress);
+        }
 
         let sql = `SELECT
                         p.id, p.token_id, p.buyer_address, p.seller_address,
                         p.quantity, p.price_per_token, p.total_price,
                         p.transaction_hash, p.status, p.created_at, p.updated_at,
-                        t.name, t.symbol
+                        t.name, t.symbol, t.contract_address
                    FROM purchases p
                    LEFT JOIN tokens t ON p.token_id = t.id`;
 
