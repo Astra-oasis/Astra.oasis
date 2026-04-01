@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import { Wallet, Menu, Search, HelpCircle, LayoutGrid, PlusCircle, Tv, LifeBuoy, X, ChevronDown, Settings, LogOut } from 'lucide-react';
 import DolphinLogo from './DolphinLogo';
 import { ViewState } from '../types';
@@ -18,7 +18,11 @@ interface HeaderProps {
   currentView: ViewState;
 }
 
-const Header: React.FC<HeaderProps> = ({
+export interface HeaderRef {
+  refreshWalletInfo: () => Promise<void>;
+}
+
+const Header = forwardRef<HeaderRef, HeaderProps>(({
   onGoHome,
   onGoCreate,
   onGoLivestreams,
@@ -29,10 +33,17 @@ const Header: React.FC<HeaderProps> = ({
   walletConnected,
   walletAddress,
   currentView
-}) => {
+}, ref) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [walletInfo, setWalletInfo] = useState<any>(null);
+
+  // Expose refresh method to parent
+  useImperativeHandle(ref, () => ({
+    refreshWalletInfo: async () => {
+      await fetchWalletInfo();
+    }
+  }), [walletAddress]);
 
   // Fetch wallet info when connected
   React.useEffect(() => {
@@ -208,6 +219,8 @@ const Header: React.FC<HeaderProps> = ({
       )}
     </header>
   );
-};
+});
+
+Header.displayName = 'Header';
 
 export default Header;

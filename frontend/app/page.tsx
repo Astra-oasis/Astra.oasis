@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import Header from '../components/Header';
+import Header, { type HeaderRef } from '../components/Header';
 import KingOfTheHill from '../components/KingOfTheHill';
 import CoinCard from '../components/CoinCard';
 import FilterBar from '../components/FilterBar';
@@ -28,6 +28,8 @@ export default function Home() {
   const [address, setAddress] = useState('');
   const [realTokens, setRealTokens] = useState<Coin[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
+
+  const headerRef = useRef<HeaderRef>(null);
 
   // Toast Handler
   const addToast = (type: ToastMessage['type'], title: string, message: string) => {
@@ -66,6 +68,13 @@ export default function Home() {
 
   const handleGoProfile = () => {
     setViewState(ViewState.PROFILE);
+  };
+
+  const handleProfileUpdated = async () => {
+    // Refresh wallet info in Header
+    if (headerRef.current) {
+      await headerRef.current.refreshWalletInfo();
+    }
   };
 
   const fetchRealTokens = async () => {
@@ -201,6 +210,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-pump-bg text-pump-text font-sans pb-20 relative">
       <Header
+        ref={headerRef}
         onGoHome={handleGoHome}
         onGoCreate={handleGoCreate}
         onGoLivestreams={handleGoLivestreams}
@@ -273,6 +283,7 @@ export default function Home() {
           <ProfilePage
             walletAddress={address}
             onBack={handleGoHome}
+            onProfileUpdated={handleProfileUpdated}
           />
         )}
       </main>

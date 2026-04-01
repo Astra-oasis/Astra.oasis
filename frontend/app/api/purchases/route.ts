@@ -104,9 +104,10 @@ export async function GET(request: NextRequest) {
             conditions.push(`LOWER(t.contract_address) = LOWER($${params.length + 1})`);
             params.push(contractAddress);
         }
-        // For convenience, if wallet_address is provided, use it as buyer_address
-        if (walletAddress && !buyerAddress) {
-            conditions.push(`LOWER(p.buyer_address) = LOWER($${params.length + 1})`);
+        // For convenience, if wallet_address is provided, get both buys and sells
+        if (walletAddress && !buyerAddress && !sellerAddress) {
+            conditions.push(`(LOWER(p.buyer_address) = LOWER($${params.length + 1}) OR LOWER(p.seller_address) = LOWER($${params.length + 2}))`);
+            params.push(walletAddress);
             params.push(walletAddress);
         }
 

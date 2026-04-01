@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Camera } from 'lucide-react';
+import { X, Camera, Loader } from 'lucide-react';
 
 interface WalletInfo {
   id: number;
@@ -137,9 +137,10 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 bg-pump-green hover:bg-pump-green/80 text-black p-2 rounded-full transition-colors"
+                className="absolute bottom-0 right-0 bg-pump-green hover:bg-pump-green/80 disabled:bg-gray-600 text-black p-2 rounded-full transition-colors disabled:cursor-not-allowed"
+                disabled={loading}
               >
-                <Camera className="w-4 h-4" />
+                {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
               </button>
               <input
                 ref={fileInputRef}
@@ -161,7 +162,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Enter username"
-              className="w-full bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-pump-green transition-colors"
+              disabled={loading}
+              className="w-full bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-pump-green transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               maxLength={50}
             />
             <p className="text-xs text-gray-500 mt-1">You can change your username once every day</p>
@@ -174,7 +176,8 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Describe your profile"
-              className="w-full bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-pump-green transition-colors resize-none h-24"
+              disabled={loading}
+              className="w-full bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-pump-green transition-colors resize-none h-24 disabled:opacity-50 disabled:cursor-not-allowed"
               maxLength={200}
             />
           </div>
@@ -190,8 +193,9 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
           <button
             onClick={handleSave}
             disabled={loading || !displayName.trim()}
-            className="w-full bg-pump-green hover:bg-pump-green/80 disabled:bg-gray-700 disabled:cursor-not-allowed text-black font-bold py-3 rounded-lg transition-colors"
+            className="w-full bg-pump-green hover:bg-pump-green/80 disabled:bg-gray-700 disabled:cursor-not-allowed text-black font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
           >
+            {loading && <Loader className="w-4 h-4 animate-spin" />}
             {loading ? 'Saving...' : 'Save'}
           </button>
         </div>

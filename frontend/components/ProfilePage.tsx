@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Edit2, Copy, Check } from 'lucide-react';
+import Image from 'next/image';
 import { getWalletInfo } from '@/lib/walletHelper';
 import EditProfileModal from './EditProfileModal';
 
@@ -30,10 +31,12 @@ interface CoinInfo {
 interface ProfilePageProps {
   walletAddress: string;
   onBack: () => void;
+  onProfileUpdated?: () => Promise<void>;
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProfileUpdated }) => {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
+  const [testBalance, setTestBalance] = useState<number>(0);
   const [ownedCoinDetails, setOwnedCoinDetails] = useState<(CoinInfo & { quantity?: number; pricePerToken?: number })[]>([]);
   const [mintedCoinDetails, setMintedCoinDetails] = useState<CoinInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +71,39 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
     fetchWalletInfo();
   }, [walletAddress]);
 
+  const fetchTestBalance = useCallback(async (address: string) => {
+    try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      const response = await fetch('https://testnet.sapphire.oasis.io', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_getBalance',
+          params: [address, 'latest'],
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+      if (data.result) {
+        // Convert from wei to TEST (1 TEST = 10^18 wei)
+        const balance = parseInt(data.result, 16) / 1e18;
+        setTestBalance(balance);
+      }
+    } catch (error) {
+      console.error('Error fetching TEST balance:', error);
+      // Don't fail the entire wallet load if balance fetch fails
+      setTestBalance(0);
+    }
+  }, []);
+
   const fetchWalletInfo = useCallback(async () => {
     try {
       setLoading(true);
@@ -79,6 +115,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
       }
 
       setWalletInfo(result.wallet);
+      
+      // Fetch TEST balance in background (don't block)
+      fetchTestBalance(walletAddress);
 
       // Fetch all tokens at once (not separately for owned/minted)
       const response = await fetch('/api/tokens');
@@ -97,23 +136,26 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
         result.wallet.minted_coins?.includes(coin.contract_address)
       );
 
-      // Display coins immediately (with quantity = 0 initially)
-      setOwnedCoinDetails(ownedCoins.map((coin: any) => ({ ...coin, quantity: 0, pricePerToken: 0 })));
       setMintedCoinDetails(mintedCoins);
 
-      // Loading is done - render UI immediately
-      setLoading(false);
-
-      // Fetch purchase details in background (don't block rendering)
+      // Fetch purchase details BEFORE setting ownedCoinDetails (avoid flicker)
       if (ownedCoins.length > 0) {
         setPurchasesLoading(true);
         fetchPurchaseDetails(ownedCoins);
+      } else {
+        setOwnedCoinDetails([]);
+        setLoading(false);
+      }
+      
+      // Loading is done - render UI immediately (only if no owned coins)
+      if (ownedCoins.length === 0) {
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error fetching wallet info:', error);
       setLoading(false);
     }
-  }, [walletAddress]);
+  }, [walletAddress, fetchTestBalance]);
 
   const fetchPurchaseDetails = useCallback(async (coins: any[]) => {
     try {
@@ -122,16 +164,41 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
           try {
             const purchaseRes = await fetch(`/api/purchases?wallet_address=${walletAddress}&contract_address=${coin.contract_address}`);
             const purchaseData = await purchaseRes.json();
-            const totalQuantity = purchaseData.data?.reduce((sum: number, p: any) => sum + (parseFloat(p.quantity) || 0), 0) || 0;
-            const avgPrice = purchaseData.data?.length > 0 ? (parseFloat(purchaseData.data[0]?.price_per_token) || 0) : 0;
-            return { ...coin, quantity: totalQuantity, pricePerToken: avgPrice };
+            
+            // Calculate: total bought - total sold
+            let totalBought = 0;
+            let totalSold = 0;
+            let avgPrice = 0;
+            
+            if (purchaseData.data && purchaseData.data.length > 0) {
+              purchaseData.data.forEach((p: any) => {
+                const qty = parseFloat(p.quantity) || 0;
+                if (p.buyer_address && p.buyer_address.toLowerCase() === walletAddress.toLowerCase()) {
+                  totalBought += qty;
+                }
+                if (p.seller_address && p.seller_address.toLowerCase() === walletAddress.toLowerCase()) {
+                  totalSold += qty;
+                }
+              });
+              // Use first buy transaction's price as average
+              const buyTransaction = purchaseData.data.find((p: any) => 
+                p.buyer_address && p.buyer_address.toLowerCase() === walletAddress.toLowerCase()
+              );
+              avgPrice = buyTransaction ? (parseFloat(buyTransaction.price_per_token) || 0) : 0;
+            }
+            
+            const netQuantity = totalBought - totalSold;
+            return { ...coin, quantity: netQuantity > 0 ? netQuantity : 0, pricePerToken: avgPrice };
           } catch (e) {
             console.error(`Error fetching purchases for ${coin.symbol}:`, e);
             return { ...coin, quantity: 0, pricePerToken: 0 };
           }
         })
       );
-      setOwnedCoinDetails(coinsWithQuantity);
+      // Filter out coins with quantity = 0
+      const filteredCoins = coinsWithQuantity.filter(coin => coin.quantity > 0);
+      setOwnedCoinDetails(filteredCoins);
+      setLoading(false);
     } finally {
       setPurchasesLoading(false);
     }
@@ -140,6 +207,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
   const handleProfileUpdated = () => {
     setShowEditModal(false);
     fetchWalletInfo();
+    // Notify parent to refresh Header
+    if (onProfileUpdated) {
+      onProfileUpdated();
+    }
   };
 
   const handleCopyAddress = async () => {
@@ -277,11 +348,36 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
           {/* Owned Coins */}
           <div>
             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              Portfolio ({ownedCoinDetails.length}) {purchasesLoading && <span className="text-xs text-gray-500">updating...</span>}
+              Portfolio ({ownedCoinDetails.length + 1}) {purchasesLoading && <span className="text-xs text-gray-500">updating...</span>}
             </h3>
-            {ownedCoinDetails.length > 0 ? (
-              <div className="space-y-3">
-                {ownedCoinDetails.map((coin) => (
+            <div className="space-y-3">
+              {/* TEST Balance Item */}
+              <div className="bg-gray-900/30 rounded-xl p-4 border border-gray-800 hover:border-gray-700 transition-colors flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
+                  <Image 
+                    src="/oasis-logo.svg" 
+                    alt="Oasis TEST" 
+                    width={48} 
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-white">TEST</p>
+                  <p className="text-sm text-gray-400">
+                    {formatCompactNumber(testBalance)} TEST
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-pump-green">
+                    -
+                  </p>
+                </div>
+              </div>
+
+              {/* Other Coins */}
+              {ownedCoinDetails.length > 0 ? (
+                ownedCoinDetails.map((coin) => (
                   <div
                     key={coin.contract_address}
                     className="bg-gray-900/30 rounded-xl p-4 border border-gray-800 hover:border-gray-700 transition-colors flex items-center gap-4"
@@ -303,13 +399,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack }) => {
                       </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-gray-900/20 rounded-xl p-8 border border-gray-800 text-center">
-                <p className="text-gray-400">No coins in portfolio yet</p>
-              </div>
-            )}
+                ))
+              ) : null}
+            </div>
           </div>
 
           {/* Minted Coins */}

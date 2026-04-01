@@ -13,7 +13,7 @@ interface TradeFormProps {
   coin: Coin;
   showToast: (type: ToastMessage['type'], title: string, message: string) => void;
   removeToast: (id: string) => void;
-  onSuccess?: () => void;
+  onSuccess?: (tradeType: 'buy' | 'sell', totalPrice: number) => Promise<void>;
 }
 
 const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onSuccess }) => {
@@ -243,7 +243,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Buy' : 'Sell'} ${amount} ${symbol}`);
       setAmount('');
       loadBalances();
-      if (onSuccess) onSuccess();
+      if (onSuccess) await onSuccess(mode, parseFloat(returnAmount));
     } catch (error: any) {
       console.error('Trade error:', error);
       removeToast(toastId);
