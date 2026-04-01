@@ -98,7 +98,7 @@ const TradingViewChart = memo(({
           target="_blank"
           className="text-xs text-blue-500 hover:text-blue-600"
         >
-          Track all markets on TradingView
+          Track all markets on TradingView.
         </a>
       </div>
     </div>
