@@ -8,15 +8,21 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Next.js
+.next/
 .next
+frontend/.next/
+.next/cache/
+.next/server/
+.next/trace
+out/
 
 # Build outputs
 dist/
 build/
 */dist/
 */build/
-.next/
-out/
 
 # Hardhat
 cache/
