@@ -1,0 +1,276 @@
+'use client'
+
+import React, { useEffect, useState, useRef } from 'react';
+import { Coin, Comment, Trade } from '../types';
+import TokenLightweightChart from './TokenLightweightChart';
+import TradeForm from './TradeForm';
+import CommentSection from './CommentSection';
+import TransactionTable from './TransactionTable';
+import BondingCurve from './BondingCurve';
+import TokenInfoBar from './TokenInfoBar';
+import TokenMetrics from './TokenMetrics';
+import HoldersList from './HoldersList';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ToastMessage } from './Toast';
+import { BrowserProvider, Contract, formatEther } from 'ethers';
+import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
+import { TOKEN_ABI } from '../abi/factoryAbi';
+
+const BONDING_TARGET = 10000; // TEST
+
+interface CoinDetailProps {
+  coin: Coin;
+  onBack: () => void;
+  showToast: (type: ToastMessage['type'], title: string, message: string) => string;
+  removeToast: (id: string) => void;
+}
+
+const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, removeToast }) => {
+  const [comments, setComments]       = useState<Comment[]>([]);
+  const [liveTrades, setLiveTrades]   = useState<Trade[]>([]);
+  const [tokenData, setTokenData]     = useState<Coin & { reserveBalance?: number }>(coin as any);
+  const [tokenMetrics, setTokenMetrics] = useState<any>(null);
+  const [chartRefreshKey, setChartRefreshKey] = useState(0);
+
+  // Bonding progress state — separate so it updates instantly on buy
+  const [maxReserve, setMaxReserve]   = useState<number>(0);
+  const maxReserveRef                 = useRef<number>(0); // sync ref for optimistic update
+
+  const progress     = Math.min(100, (maxReserve / BONDING_TARGET) * 100);
+  const pctRemaining = (100 - progress).toFixed(2);
+
+  const getProvider = async () => {
+    let ethereum = window.ethereum;
+    if (window.ethereum?.providers) {
+      ethereum = window.ethereum.providers.find((p: any) => p.isMetaMask) || window.ethereum;
+    }
+    return new BrowserProvider(wrapEthereumProvider(ethereum));
+  };
+
+  // ── Load bonding progress from DB ──────────────────────────────────────────
+  const loadBondingProgress = async () => {
+    if (!coin.id) return;
+    try {
+      const res  = await fetch(`/api/bonding-progress?tokenId=${coin.id}`);
+      const data = await res.json();
+      if (data.success) {
+        const val = parseFloat(data.data.max_reserve) || 0;
+        maxReserveRef.current = val;
+        setMaxReserve(val);
+      }
+    } catch { /* silent */ }
+  };
+
+  // ── Load price + market data from chain ────────────────────────────────────
+  const loadRealTokenData = async () => {
+    if (!coin.tokenAddress || !window.ethereum) return;
+    try {
+      const provider      = await getProvider();
+      const tokenContract = new Contract(coin.tokenAddress, TOKEN_ABI, provider);
+      const [price, sold] = await Promise.all([
+        tokenContract.getCurrentPrice(),
+        tokenContract.soldSupply(),
+      ]);
+      const priceEth = parseFloat(formatEther(price));
+      const soldEth  = parseFloat(formatEther(sold));
+      setTokenData(prev => ({
+        ...prev,
+        marketCap: soldEth * priceEth * 1_000_000,
+        priceHistory: [
+          ...prev.priceHistory,
+          { time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), price: priceEth },
+        ],
+      }));
+      loadTokenMetrics(priceEth);
+    } catch (e) {
+      console.error('Error loading token data:', e);
+    }
+  };
+
+  const loadTokenMetrics = async (currentPrice?: number) => {
+    if (!coin.tokenAddress) return;
+    try {
+      const resolvedPrice = currentPrice ?? tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price;
+      const res  = await fetch('/api/tokens/calculate-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_address: coin.tokenAddress, current_price: resolvedPrice }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) setTokenMetrics(data.data);
+    } catch { /* silent */ }
+  };
+
+  const fetchRealTrades = async () => {
+    if (!coin.id) return;
+    try {
+      const res  = await fetch(`/api/trades?tokenId=${coin.id}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setLiveTrades(data.data.map((p: any) => ({
+          type:      p.trade_type === 'sell' ? 'sell' : 'buy',
+          amount:    null,
+          price:     parseFloat(p.price_per_token) || 0,
+          timestamp: new Date(p.created_at).getTime().toString(),
+          user:      p.buyer_address || p.seller_address || '0x...',
+        })));
+      }
+    } catch { /* silent */ }
+  };
+
+  const fetchRealComments = async () => {
+    if (!coin.id) return;
+    try {
+      const res  = await fetch(`/api/comments?tokenId=${coin.id}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setComments(data.data.map((c: any) => ({
+          id:        c.id.toString(),
+          user:      c.user_address || 'Anonymous',
+          text:      c.comment_text || '',
+          timestamp: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type:      'chat',
+        })));
+      }
+    } catch { /* silent */ }
+  };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    loadBondingProgress();
+    loadRealTokenData();
+    loadTokenMetrics();
+    fetchRealTrades();
+    fetchRealComments();
+
+    const priceInterval   = setInterval(loadRealTokenData,    5_000);
+    const metricsInterval = setInterval(loadTokenMetrics,    10_000);
+    const progressInterval = setInterval(loadBondingProgress, 15_000);
+
+    return () => {
+      clearInterval(priceInterval);
+      clearInterval(metricsInterval);
+      clearInterval(progressInterval);
+    };
+  }, [coin]);
+
+  const handleAddComment = async (text: string) => {
+    if (!coin.id) return;
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tokenId: coin.id, user: 'You', text }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setComments(prev => [...prev, {
+          id:        data.data.id.toString(),
+          user:      data.data.user_address || 'You',
+          text:      data.data.comment_text,
+          timestamp: new Date(data.data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type:      'chat',
+        }]);
+      }
+    } catch { /* silent */ }
+  };
+
+  // ── Called by TradeForm after successful buy ────────────────────────────────
+  const handleTradeSuccess = async (tradeType: 'buy' | 'sell', totalPrice: number) => {
+    // Optimistic update — instant UI feedback, no waiting for DB
+    if (tradeType === 'buy') {
+      const newVal = maxReserveRef.current + totalPrice;
+      maxReserveRef.current = newVal;
+      setMaxReserve(newVal);
+    }
+
+    // Background sync
+    await Promise.all([loadRealTokenData(), fetchRealTrades(), loadTokenMetrics(), loadBondingProgress()]);
+    setChartRefreshKey(k => k + 1);
+  };
+
+  const currentPrice = tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price;
+
+  return (
+    <div className="container mx-auto px-4 py-4 max-w-[1600px] animate-fade-in">
+      <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-white mb-4 text-sm font-bold uppercase transition-colors">
+        <ArrowLeft className="w-4 h-4" /> Back to board
+      </button>
+
+      <TokenInfoBar coin={tokenData} currentPriceOverride={currentPrice} />
+      <TokenMetrics token={tokenMetrics} key={tokenMetrics?.id || 'empty'} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left column */}
+        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+          <TokenLightweightChart
+            tokenId={coin.id}
+            ticker={coin.ticker}
+            currentPrice={currentPrice}
+            refreshKey={chartRefreshKey}
+          />
+
+          {/* Bonding Curve — full width, replaces AI Analysis */}
+          <div className="bg-pump-card border border-gray-800 rounded-lg p-5">
+            {/* Header row */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Bonding Curve Progress</h3>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-bold">
+                <span className="text-pump-green">{progress.toFixed(2)}%</span>
+                <span className="text-gray-600">·</span>
+                <span className="text-gray-400 text-xs font-mono">{pctRemaining}% to Graduate</span>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <BondingCurve progress={progress} />
+
+            {/* Stats row */}
+            <div className="mt-3 grid grid-cols-2 gap-4 text-xs font-mono">
+              <div>
+                <div className="text-gray-600 uppercase tracking-wider mb-0.5">Collected</div>
+                <div className="text-white font-bold">{maxReserve.toFixed(4)} TEST</div>
+              </div>
+              <div className="text-right">
+                <div className="text-gray-600 uppercase tracking-wider mb-0.5">Target</div>
+                <div className="text-gray-300 font-bold">10,000 TEST</div>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div className="mt-4 flex gap-3 items-start bg-yellow-900/10 border border-yellow-700/20 p-3 rounded text-[11px] text-yellow-500/80">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>
+                When the bonding curve reaches <b>10,000 TEST</b>, all liquidity will be deposited into{' '}
+                <b>Oasis DEX</b> and burned. Token graduates to open market.
+              </p>
+            </div>
+          </div>
+
+          <div className="hidden lg:block">
+            <TransactionTable trades={liveTrades} />
+          </div>
+        </div>
+
+        {/* Right column */}
+        <div className="lg:col-span-4 xl:col-span-3 space-y-6">
+          <TradeForm
+            coin={tokenData}
+            showToast={showToast}
+            removeToast={removeToast}
+            onSuccess={handleTradeSuccess}
+          />
+          <CommentSection comments={comments} onAddComment={handleAddComment} />
+          <HoldersList />
+          <div className="lg:hidden">
+            <TransactionTable trades={liveTrades} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CoinDetail;
