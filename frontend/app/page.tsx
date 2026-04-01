@@ -13,77 +13,48 @@ import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
 import { FACTORY_ABI, FACTORY_ADDRESS } from '../abi/factoryAbi';
 import { saveWalletInfo } from '../lib/walletHelper';
 
-const CoinDetail = dynamic(() => import('../components/CoinDetail'), { ssr: false });
+const CoinDetail    = dynamic(() => import('../components/CoinDetail'),    { ssr: false });
 const CreateCoinPage = dynamic(() => import('../components/CreateCoinPage'), { ssr: false });
 const LivestreamsPage = dynamic(() => import('../components/LivestreamsPage'), { ssr: false });
-const SupportPage = dynamic(() => import('../components/SupportPage'), { ssr: false });
-const ProfilePage = dynamic(() => import('../components/ProfilePage'), { ssr: false });
+const SupportPage   = dynamic(() => import('../components/SupportPage'),   { ssr: false });
+const ProfilePage   = dynamic(() => import('../components/ProfilePage'),   { ssr: false });
 
 export default function Home() {
-  const [viewState, setViewState] = useState<ViewState>(ViewState.GRID);
+  const [viewState, setViewState]     = useState<ViewState>(ViewState.GRID);
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>('creationTime');
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [connected, setConnected] = useState(false);
-  const [address, setAddress] = useState('');
-  const [realTokens, setRealTokens] = useState<Coin[]>([]);
+  const [sortOption, setSortOption]   = useState<SortOption>('creationTime');
+  const [toasts, setToasts]           = useState<ToastMessage[]>([]);
+  const [connected, setConnected]     = useState(false);
+  const [address, setAddress]         = useState('');
+  const [realTokens, setRealTokens]   = useState<Coin[]>([]);
   const [loadingTokens, setLoadingTokens] = useState(false);
 
   const headerRef = useRef<HeaderRef>(null);
 
-  // Toast Handler
   const addToast = (type: ToastMessage['type'], title: string, message: string) => {
     const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, type, title, message }]);
+    setToasts(prev => [...prev, { id, type, title, message }]);
     return id;
   };
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  const removeToast = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
 
-  const handleCoinClick = (coin: Coin) => {
-    setSelectedCoin(coin);
-    setViewState(ViewState.DETAIL);
-  };
-
-  const handleGoHome = () => {
-    setSelectedCoin(null);
-    setViewState(ViewState.GRID);
-    // Refetch tokens when returning to dashboard
-    fetchRealTokens();
-  };
-
-  const handleGoCreate = () => {
-    setViewState(ViewState.CREATE);
-  };
-
-  const handleGoLivestreams = () => {
-    setViewState(ViewState.LIVESTREAMS);
-  };
-
-  const handleGoSupport = () => {
-    setViewState(ViewState.SUPPORT);
-  };
-
-  const handleGoProfile = () => {
-    setViewState(ViewState.PROFILE);
-  };
+  const handleCoinClick = (coin: Coin) => { setSelectedCoin(coin); setViewState(ViewState.DETAIL); };
+  const handleGoHome    = () => { setSelectedCoin(null); setViewState(ViewState.GRID); fetchRealTokens(); };
+  const handleGoCreate  = () => setViewState(ViewState.CREATE);
+  const handleGoLivestreams = () => setViewState(ViewState.LIVESTREAMS);
+  const handleGoSupport = () => setViewState(ViewState.SUPPORT);
+  const handleGoProfile = () => setViewState(ViewState.PROFILE);
 
   const handleProfileUpdated = async () => {
-    // Refresh wallet info in Header
-    if (headerRef.current) {
-      await headerRef.current.refreshWalletInfo();
-    }
+    if (headerRef.current) await headerRef.current.refreshWalletInfo();
   };
 
   const fetchRealTokens = async () => {
     setLoadingTokens(true);
     try {
-      // Fetch tokens from database only, sorted by marketcap descending
       const response = await fetch('/api/tokens');
       const data = await response.json();
-
       if (data.success && data.data) {
         const formattedTokens: Coin[] = data.data.map((token: any, idx: number) => {
           const maxReserve = parseFloat(token.max_reserve) || 0;
@@ -92,7 +63,7 @@ export default function Home() {
             id: String(token.id ?? idx),
             name: token.name,
             ticker: token.symbol,
-            description: token.description || `Token created on Oasis Sapphire`,
+            description: token.description || 'Token created on Oasis Sapphire',
             imageUrl: token.image_url || `https://picsum.photos/200/200?random=${idx + 500}`,
             creator: token.owner,
             marketCap: parseFloat(token.marketcap) || 0,
@@ -102,7 +73,7 @@ export default function Home() {
             lastReply: new Date(token.created_at).getTime(),
             priceHistory: [],
             tokenAddress: token.contract_address,
-            contractAddress: token.contract_address
+            contractAddress: token.contract_address,
           };
         });
         setRealTokens(formattedTokens);
@@ -117,63 +88,37 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    fetchRealTokens();
-  }, []);
+  useEffect(() => { fetchRealTokens(); }, []);
 
-  // Auto-refresh tokens every 10 seconds when on dashboard (GRID view)
   useEffect(() => {
     if (viewState !== ViewState.GRID) return;
-
-    const interval = setInterval(() => {
-      fetchRealTokens();
-    }, 10000); // 10 seconds
-
+    const interval = setInterval(fetchRealTokens, 10000);
     return () => clearInterval(interval);
   }, [viewState]);
 
   const sortedCoins = useMemo(() => {
     const coins = [...realTokens];
     switch (sortOption) {
-      case 'marketCap':
-        return coins.sort((a, b) => b.marketCap - a.marketCap);
-      case 'creationTime':
-        return coins.sort((a, b) => b.createdAt - a.createdAt);
-      case 'lastReply':
-        return coins.sort((a, b) => b.lastReply - a.lastReply);
-      case 'featured':
-      default:
-        // Sort by marketCap for featured view (King of the Hill and default display)
-        return coins.sort((a, b) => b.marketCap - a.marketCap);
+      case 'marketCap':    return coins.sort((a, b) => b.marketCap - a.marketCap);
+      case 'creationTime': return coins.sort((a, b) => b.createdAt - a.createdAt);
+      case 'lastReply':    return coins.sort((a, b) => b.lastReply - a.lastReply);
+      default:             return coins.sort((a, b) => b.marketCap - a.marketCap);
     }
   }, [sortOption, realTokens]);
 
   const handleConnectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts',
-        });
-        if (accounts.length > 0) {
-          const walletAddress = accounts[0];
-          setConnected(true);
-          setAddress(walletAddress);
-          
-          // Save wallet to database
-          try {
-            await saveWalletInfo(walletAddress);
-            console.log('✅ Wallet saved to database');
-          } catch (error) {
-            console.error('Failed to save wallet to database:', error);
-          }
-          
-          addToast('success', 'Wallet Connected', `Connected to ${walletAddress.slice(0, 6)}...`);
-        }
-      } catch (error) {
-        addToast('error', 'Connection Failed', 'Failed to connect wallet.');
+    if (!window.ethereum) { addToast('error', 'No Wallet', 'Please install MetaMask.'); return; }
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts.length > 0) {
+        const walletAddress = accounts[0];
+        setConnected(true);
+        setAddress(walletAddress);
+        try { await saveWalletInfo(walletAddress); } catch { /* silent */ }
+        addToast('success', 'Wallet Connected', `Connected to ${walletAddress.slice(0, 6)}...`);
       }
-    } else {
-      addToast('error', 'No Wallet', 'Please install MetaMask.');
+    } catch {
+      addToast('error', 'Connection Failed', 'Failed to connect wallet.');
     }
   };
 
@@ -185,23 +130,13 @@ export default function Home() {
 
   useEffect(() => {
     const checkConnection = async () => {
-      if (window.ethereum) {
-        const accounts = await window.ethereum.request({
-          method: 'eth_accounts',
-        });
-        if (accounts.length > 0) {
-          const walletAddress = accounts[0];
-          setConnected(true);
-          setAddress(walletAddress);
-          
-          // Save wallet to database when auto-connecting
-          try {
-            await saveWalletInfo(walletAddress);
-            console.log('✅ Wallet auto-saved to database');
-          } catch (error) {
-            console.error('Failed to auto-save wallet:', error);
-          }
-        }
+      if (!window.ethereum) return;
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts.length > 0) {
+        const walletAddress = accounts[0];
+        setConnected(true);
+        setAddress(walletAddress);
+        try { await saveWalletInfo(walletAddress); } catch { /* silent */ }
       }
     };
     checkConnection();
@@ -223,41 +158,25 @@ export default function Home() {
         currentView={viewState}
       />
 
-      {/* Toast Container */}
       <div className="fixed top-20 right-4 z-[100] flex flex-col gap-2 w-full max-w-sm pointer-events-none">
-        {toasts.map((toast) => (
-          <Toast key={toast.id} toast={toast} onClose={removeToast} />
-        ))}
+        {toasts.map(toast => <Toast key={toast.id} toast={toast} onClose={removeToast} />)}
       </div>
 
       <main className="container mx-auto px-4 py-6">
         {viewState === ViewState.GRID && (
           <>
             <KingOfTheHill coin={sortedCoins[0]} onClick={handleCoinClick} />
-
             <div className="mt-8">
               <FilterBar currentSort={sortOption} onSortChange={setSortOption} />
-
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {sortedCoins.map((coin) => (
-                  <CoinCard
-                    key={coin.id}
-                    coin={coin}
-                    onClick={handleCoinClick}
-                  />
-                ))}
+                {sortedCoins.map(coin => <CoinCard key={coin.id} coin={coin} onClick={handleCoinClick} />)}
               </div>
             </div>
           </>
         )}
 
         {viewState === ViewState.DETAIL && selectedCoin && (
-          <CoinDetail
-            coin={selectedCoin}
-            onBack={handleGoHome}
-            showToast={addToast}
-            removeToast={removeToast}
-          />
+          <CoinDetail coin={selectedCoin} onBack={handleGoHome} showToast={addToast} removeToast={removeToast} />
         )}
 
         {viewState === ViewState.CREATE && (
@@ -271,268 +190,10 @@ export default function Home() {
           />
         )}
 
-        {viewState === ViewState.LIVESTREAMS && (
-          <LivestreamsPage />
-        )}
-
-        {viewState === ViewState.SUPPORT && (
-          <SupportPage />
-        )}
-
+        {viewState === ViewState.LIVESTREAMS && <LivestreamsPage />}
+        {viewState === ViewState.SUPPORT && <SupportPage />}
         {viewState === ViewState.PROFILE && address && (
-          <ProfilePage
-            walletAddress={address}
-            onBack={handleGoHome}
-            onProfileUpdated={handleProfileUpdated}
-          />
-        )}
-      </main>
-    </div>
-  );
-}
-'use client'
-
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import Header from '../components/Header';
-import KingOfTheHill from '../components/KingOfTheHill';
-import CoinCard from '../components/CoinCard';
-import FilterBar from '../components/FilterBar';
-import Toast, { ToastMessage } from '../components/Toast';
-import { Coin, ViewState, SortOption } from '../types';
-import { BrowserProvider, Contract } from 'ethers';
-import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
-import { FACTORY_ABI, FACTORY_ADDRESS } from '../abi/factoryAbi';
-
-const CoinDetail = dynamic(() => import('../components/CoinDetail'), { ssr: false });
-const CreateCoinPage = dynamic(() => import('../components/CreateCoinPage'), { ssr: false });
-const LivestreamsPage = dynamic(() => import('../components/LivestreamsPage'), { ssr: false });
-const SupportPage = dynamic(() => import('../components/SupportPage'), { ssr: false });
-
-export default function Home() {
-  const [viewState, setViewState] = useState<ViewState>(ViewState.GRID);
-  const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
-  const [sortOption, setSortOption] = useState<SortOption>('creationTime');
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [connected, setConnected] = useState(false);
-  const [address, setAddress] = useState('');
-  const [realTokens, setRealTokens] = useState<Coin[]>([]);
-  const [loadingTokens, setLoadingTokens] = useState(false);
-
-  // Toast Handler
-  const addToast = (type: ToastMessage['type'], title: string, message: string) => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, type, title, message }]);
-    return id;
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  const handleCoinClick = (coin: Coin) => {
-    setSelectedCoin(coin);
-    setViewState(ViewState.DETAIL);
-  };
-
-  const handleGoHome = () => {
-    setSelectedCoin(null);
-    setViewState(ViewState.GRID);
-    // Refetch tokens when returning to dashboard
-    fetchRealTokens();
-  };
-
-  const handleGoCreate = () => {
-    setViewState(ViewState.CREATE);
-  };
-
-  const handleGoLivestreams = () => {
-    setViewState(ViewState.LIVESTREAMS);
-  };
-
-  const handleGoSupport = () => {
-    setViewState(ViewState.SUPPORT);
-  };
-
-  const fetchRealTokens = async () => {
-    setLoadingTokens(true);
-    try {
-      // Fetch tokens from database only, sorted by marketcap descending
-      const response = await fetch('/api/tokens');
-      const data = await response.json();
-
-      if (data.success && data.data) {
-        const formattedTokens: Coin[] = data.data.map((token: any, idx: number) => {
-          const maxReserve = parseFloat(token.max_reserve) || 0;
-          const bondingCurveProgress = Math.min(100, (maxReserve / 10000) * 100);
-          return {
-            id: String(token.id ?? idx),
-            name: token.name,
-            ticker: token.symbol,
-            description: token.description || `Token created on Oasis Sapphire`,
-            imageUrl: token.image_url || `https://picsum.photos/200/200?random=${idx + 500}`,
-            creator: token.owner,
-            marketCap: parseFloat(token.marketcap) || 0,
-            replies: 0,
-            bondingCurveProgress,
-            createdAt: new Date(token.created_at).getTime(),
-            lastReply: new Date(token.created_at).getTime(),
-            priceHistory: [],
-            tokenAddress: token.contract_address,
-            contractAddress: token.contract_address
-          };
-        });
-        setRealTokens(formattedTokens);
-      } else {
-        setRealTokens([]);
-      }
-    } catch (error) {
-      console.error('Error fetching tokens:', error);
-      setRealTokens([]);
-    } finally {
-      setLoadingTokens(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRealTokens();
-  }, []);
-
-  // Auto-refresh tokens every 10 seconds when on dashboard (GRID view)
-  useEffect(() => {
-    if (viewState !== ViewState.GRID) return;
-
-    const interval = setInterval(() => {
-      fetchRealTokens();
-    }, 10000); // 10 seconds
-
-    return () => clearInterval(interval);
-  }, [viewState]);
-
-  const sortedCoins = useMemo(() => {
-    const coins = [...realTokens];
-    switch (sortOption) {
-      case 'marketCap':
-        return coins.sort((a, b) => b.marketCap - a.marketCap);
-      case 'creationTime':
-        return coins.sort((a, b) => b.createdAt - a.createdAt);
-      case 'lastReply':
-        return coins.sort((a, b) => b.lastReply - a.lastReply);
-      case 'featured':
-      default:
-        // Sort by marketCap for featured view (King of the Hill and default display)
-        return coins.sort((a, b) => b.marketCap - a.marketCap);
-    }
-  }, [sortOption, realTokens]);
-
-  const handleConnectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts',
-        });
-        if (accounts.length > 0) {
-          setConnected(true);
-          setAddress(accounts[0]);
-          addToast('success', 'Wallet Connected', `Connected to ${accounts[0].slice(0, 6)}...`);
-        }
-      } catch (error) {
-        addToast('error', 'Connection Failed', 'Failed to connect wallet.');
-      }
-    } else {
-      addToast('error', 'No Wallet', 'Please install MetaMask.');
-    }
-  };
-
-  const handleDisconnectWallet = () => {
-    setConnected(false);
-    setAddress('');
-    addToast('success', 'Wallet Disconnected', 'Your wallet has been disconnected.');
-  };
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (window.ethereum) {
-        const accounts = await window.ethereum.request({
-          method: 'eth_accounts',
-        });
-        if (accounts.length > 0) {
-          setConnected(true);
-          setAddress(accounts[0]);
-        }
-      }
-    };
-    checkConnection();
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-pump-bg text-pump-text font-sans pb-20 relative">
-      <Header
-        onGoHome={handleGoHome}
-        onGoCreate={handleGoCreate}
-        onGoLivestreams={handleGoLivestreams}
-        onGoSupport={handleGoSupport}
-        onConnectWallet={handleConnectWallet}
-        onDisconnectWallet={handleDisconnectWallet}
-        walletConnected={connected}
-        walletAddress={address}
-        currentView={viewState}
-      />
-
-      {/* Toast Container */}
-      <div className="fixed top-20 right-4 z-[100] flex flex-col gap-2 w-full max-w-sm pointer-events-none">
-        {toasts.map((toast) => (
-          <Toast key={toast.id} toast={toast} onClose={removeToast} />
-        ))}
-      </div>
-
-      <main className="container mx-auto px-4 py-6">
-        {viewState === ViewState.GRID && (
-          <>
-            <KingOfTheHill coin={sortedCoins[0]} onClick={handleCoinClick} />
-
-            <div className="mt-8">
-              <FilterBar currentSort={sortOption} onSortChange={setSortOption} />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {sortedCoins.map((coin) => (
-                  <CoinCard
-                    key={coin.id}
-                    coin={coin}
-                    onClick={handleCoinClick}
-                  />
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {viewState === ViewState.DETAIL && selectedCoin && (
-          <CoinDetail
-            coin={selectedCoin}
-            onBack={handleGoHome}
-            showToast={addToast}
-            removeToast={removeToast}
-          />
-        )}
-
-        {viewState === ViewState.CREATE && (
-          <CreateCoinPage
-            onCancel={handleGoHome}
-            onTokenCreated={(addr) => {
-              addToast('success', 'Token Created', `Address: ${addr}`);
-              fetchRealTokens();
-              handleGoHome();
-            }}
-          />
-        )}
-
-        {viewState === ViewState.LIVESTREAMS && (
-          <LivestreamsPage />
-        )}
-
-        {viewState === ViewState.SUPPORT && (
-          <SupportPage />
+          <ProfilePage walletAddress={address} onBack={handleGoHome} onProfileUpdated={handleProfileUpdated} />
         )}
       </main>
     </div>
