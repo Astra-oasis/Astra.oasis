@@ -48,7 +48,9 @@ export async function GET(request: NextRequest) {
         }
 
         const result = await query(
-            `SELECT c.*, COALESCE(NULLIF(w.display_name, ''), c.user_address) AS username
+            `SELECT c.*, 
+                    COALESCE(NULLIF(w.display_name, ''), c.user_address) AS username,
+                    COALESCE(NULLIF(w.avatar_url, ''), '') AS avatar_url
              FROM comments c
              LEFT JOIN wallets w ON LOWER(w.wallet_address) = LOWER(c.user_address)
              WHERE c.token_id = $1

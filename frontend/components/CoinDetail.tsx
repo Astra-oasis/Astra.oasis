@@ -143,6 +143,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
         setComments(data.data.map((c: any) => ({
           id: c.id.toString(),
           user: c.username || c.user_address || 'Anonymous',
+          avatarUrl: c.avatar_url || '',
           text: c.comment_text || '',
           timestamp: toDisplayTimeString(c.created_at),
           type: 'chat',
