@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         const result = await query(
             `INSERT INTO comments (token_id, user_address, comment_text, created_at)
-             VALUES ($1, $2, $3, NOW())
+             VALUES ($1, $2, $3, NOW() + INTERVAL '7 hours')
              RETURNING *`,
             [tokenId, user, text]
         );

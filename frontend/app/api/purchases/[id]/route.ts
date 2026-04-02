@@ -71,7 +71,7 @@ export async function PUT(
 
         const result = await query(
             `UPDATE purchases 
-       SET status = $1, updated_at = NOW()
+       SET status = $1, updated_at = NOW() + INTERVAL '7 hours'
        WHERE id = $2
        RETURNING *`,
             [status, id]

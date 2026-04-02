@@ -46,6 +46,14 @@ export default function Home() {
   const handleGoSupport = () => setViewState(ViewState.SUPPORT);
   const handleGoProfile = () => setViewState(ViewState.PROFILE);
 
+  const handleSelectTokenFromSearch = (contractAddress: string) => {
+    const token = realTokens.find(t => t.contractAddress === contractAddress);
+    if (token) {
+      setSelectedCoin(token);
+      setViewState(ViewState.DETAIL);
+    }
+  };
+
   const handleProfileUpdated = async () => {
     if (headerRef.current) await headerRef.current.refreshWalletInfo();
   };
@@ -96,6 +104,11 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [viewState]);
 
+  const topCoinByMarketCap = useMemo(() => {
+    const coins = [...realTokens];
+    return coins.length > 0 ? coins.sort((a, b) => b.marketCap - a.marketCap)[0] : null;
+  }, [realTokens]);
+
   const sortedCoins = useMemo(() => {
     const coins = [...realTokens];
     switch (sortOption) {
@@ -143,7 +156,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-pump-bg text-pump-text font-sans pb-20 relative">
+    <div className="min-h-screen bg-white dark:bg-pump-bg text-gray-900 dark:text-pump-text font-sans pb-20 relative">
       <Header
         ref={headerRef}
         onGoHome={handleGoHome}
@@ -153,6 +166,7 @@ export default function Home() {
         onGoProfile={handleGoProfile}
         onConnectWallet={handleConnectWallet}
         onDisconnectWallet={handleDisconnectWallet}
+        onSelectToken={handleSelectTokenFromSearch}
         walletConnected={connected}
         walletAddress={address}
         currentView={viewState}
@@ -165,7 +179,7 @@ export default function Home() {
       <main className="container mx-auto px-4 py-6">
         {viewState === ViewState.GRID && (
           <>
-            <KingOfTheHill coin={sortedCoins[0]} onClick={handleCoinClick} />
+            <KingOfTheHill coin={topCoinByMarketCap} onClick={handleCoinClick} />
             <div className="mt-8">
               <FilterBar currentSort={sortOption} onSortChange={setSortOption} />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
