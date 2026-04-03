@@ -30,11 +30,13 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   const [liveTrades, setLiveTrades] = useState<Trade[]>([]);
   const [tokenData, setTokenData] = useState<Coin & { reserveBalance?: number }>(coin as any);
   const [tokenMetrics, setTokenMetrics] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<{ address: string; displayName: string | null }>({ address: '', displayName: null });
   const [chartRefreshKey, setChartRefreshKey] = useState(0);
 
   // Bonding progress state — separate so it updates instantly on buy
   const [maxReserve, setMaxReserve] = useState<number>(0);
   const maxReserveRef = useRef<number>(0); // sync ref for optimistic update
+  const commentsEventSourceRef = useRef<EventSource | null>(null);
 
   const progress = Math.min(100, (maxReserve / BONDING_TARGET) * 100);
   const pctRemaining = (100 - progress).toFixed(2);
@@ -125,15 +127,79 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
       const res = await fetch(`/api/comments?tokenId=${coin.id}`);
       const data = await res.json();
       if (data.success && data.data) {
+        const toDisplayTimeString = (value: string) => {
+          const dt = new Date(value);
+          if (Number.isNaN(dt.getTime())) return value;
+          return dt.toLocaleString([], {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+        };
+
         setComments(data.data.map((c: any) => ({
           id: c.id.toString(),
-          user: c.user_address || 'Anonymous',
+          user: c.username || c.user_address || 'Anonymous',
+          avatarUrl: c.avatar_url || '',
           text: c.comment_text || '',
-          timestamp: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          timestamp: toDisplayTimeString(c.created_at),
           type: 'chat',
         })));
       }
     } catch { /* silent */ }
+  };
+
+  const loadCurrentUser = async () => {
+    if (!window.ethereum) return;
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      const address = accounts?.[0] || '';
+      if (!address) return;
+
+      let displayName: string | null = null;
+      try {
+        const res = await fetch(`/api/wallets?address=${address}`);
+        const data = await res.json();
+        if (data.success && data.wallet?.display_name) {
+          displayName = data.wallet.display_name;
+        }
+      } catch { /* silent */ }
+
+      setCurrentUser({ address, displayName });
+    } catch { /* silent */ }
+  };
+
+  const connectCommentsStream = () => {
+    if (!coin.id) return () => { };
+
+    const es = new EventSource(`/api/comments/stream?tokenId=${coin.id}`);
+    commentsEventSourceRef.current = es;
+
+    const onCommentsUpdated = () => {
+      fetchRealComments();
+    };
+
+    es.addEventListener('comments-updated', onCommentsUpdated);
+    es.addEventListener('ready', onCommentsUpdated);
+    es.onerror = () => {
+      es.close();
+      commentsEventSourceRef.current = null;
+      setTimeout(() => {
+        if (!commentsEventSourceRef.current) connectCommentsStream();
+      }, 2500);
+    };
+
+    return () => {
+      es.removeEventListener('comments-updated', onCommentsUpdated);
+      es.removeEventListener('ready', onCommentsUpdated);
+      es.close();
+      if (commentsEventSourceRef.current === es) {
+        commentsEventSourceRef.current = null;
+      }
+    };
   };
 
   useEffect(() => {
@@ -143,15 +209,23 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
     loadTokenMetrics();
     fetchRealTrades();
     fetchRealComments();
+    loadCurrentUser();
+
+    const disconnectCommentsStream = connectCommentsStream();
 
     const priceInterval = setInterval(loadRealTokenData, 5_000);
     const metricsInterval = setInterval(loadTokenMetrics, 10_000);
     const progressInterval = setInterval(loadBondingProgress, 15_000);
+    const tradesInterval = setInterval(fetchRealTrades, 5_000);
+    const commentsFallbackInterval = setInterval(fetchRealComments, 20_000);
 
     return () => {
       clearInterval(priceInterval);
       clearInterval(metricsInterval);
       clearInterval(progressInterval);
+      clearInterval(tradesInterval);
+      clearInterval(commentsFallbackInterval);
+      disconnectCommentsStream();
     };
   }, [coin]);
 
@@ -161,17 +235,14 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tokenId: coin.id, user: 'You', text }),
+        body: JSON.stringify({
+          tokenId: coin.id,
+          userAddress: currentUser.address || currentUser.displayName || 'Anonymous',
+          text,
+        }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setComments(prev => [...prev, {
-          id: data.data.id.toString(),
-          user: data.data.user_address || 'You',
-          text: data.data.comment_text,
-          timestamp: new Date(data.data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          type: 'chat',
-        }]);
+        await fetchRealComments();
       }
     } catch { /* silent */ }
   };
