@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
 
         const result = await query(
             `INSERT INTO token_bonding_progress (token_id, max_reserve, updated_at)
-             VALUES ($1, $2::NUMERIC, NOW() + INTERVAL '7 hours')
+             VALUES ($1, GREATEST(0, $2::NUMERIC), NOW() + INTERVAL '7 hours')
              ON CONFLICT (token_id) DO UPDATE
-               SET max_reserve = token_bonding_progress.max_reserve + $2::NUMERIC,
+               SET max_reserve = GREATEST(0, token_bonding_progress.max_reserve + $2::NUMERIC),
                    updated_at  = NOW() + INTERVAL '7 hours'
              RETURNING max_reserve`,
             [token_id, amount_test]

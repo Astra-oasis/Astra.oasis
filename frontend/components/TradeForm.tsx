@@ -164,6 +164,16 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       if (response.ok) {
         console.log('Purchase saved to database');
 
+        // Update bonding progress in DB (buy increases reserve, sell decreases)
+        try {
+          const delta = type === 'buy' ? parseFloat(totalPrice) : -parseFloat(totalPrice);
+          await fetch('/api/bonding-progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token_id: tokenData.token_id, amount_test: delta }),
+          });
+        } catch { /* silent */ }
+
         // Calculate and update metrics after saving purchase
         await calculateAndUpdateMetrics(tokenData.token_id, pricePerToken);
       } else {

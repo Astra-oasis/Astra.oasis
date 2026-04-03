@@ -250,15 +250,15 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   // ── Called by TradeForm after successful buy ────────────────────────────────
   const handleTradeSuccess = async (tradeType: 'buy' | 'sell', totalPrice: number) => {
     // Optimistic update — instant UI feedback, no waiting for DB
-    if (tradeType === 'buy') {
-      const newVal = maxReserveRef.current + totalPrice;
-      maxReserveRef.current = newVal;
-      setMaxReserve(newVal);
-    }
+    const newVal = tradeType === 'buy'
+      ? maxReserveRef.current + totalPrice
+      : Math.max(0, maxReserveRef.current - totalPrice);
+    maxReserveRef.current = newVal;
+    setMaxReserve(newVal);
 
-    // Background sync
-    await Promise.all([loadRealTokenData(), fetchRealTrades(), loadTokenMetrics(), loadBondingProgress()]);
-    setChartRefreshKey(k => k + 1);
+    // Background sync — fire all in parallel, don't await so UI stays snappy
+    Promise.all([loadRealTokenData(), fetchRealTrades(), loadTokenMetrics(), loadBondingProgress()])
+      .then(() => setChartRefreshKey(k => k + 1));
   };
 
   const currentPrice = tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price;
@@ -335,7 +335,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
             onSuccess={handleTradeSuccess}
           />
           <CommentSection comments={comments} onAddComment={handleAddComment} />
-          <HoldersList />
+          <HoldersList tokenId={coin.id} refreshKey={chartRefreshKey} />
           <div className="lg:hidden">
             <TransactionTable trades={liveTrades} />
           </div>
