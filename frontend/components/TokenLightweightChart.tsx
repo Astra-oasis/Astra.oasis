@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useContext } from 'react';
 import {
     createChart,
     IChartApi,
@@ -12,6 +12,7 @@ import {
     CandlestickSeries,
     HistogramSeries,
 } from 'lightweight-charts';
+import { useTheme } from '@/context/ThemeContext';
 
 interface TokenLightweightChartProps {
     tokenId: string | number;
@@ -69,6 +70,12 @@ export default function TokenLightweightChart({
     currentPrice: _currentPrice,
     refreshKey,
 }: TokenLightweightChartProps) {
+    const [mounted, setMounted] = useState(false);
+    const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('dark');
+    
+    const themeContext = useTheme();
+    const theme = themeContext?.theme || systemTheme;
+    
     const containerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -82,6 +89,41 @@ export default function TokenLightweightChart({
     const [countdownY, setCountdownY] = useState<number | null>(null);
     const isFetchingRef = useRef(false);
     const fitPendingRef = useRef(true);
+
+    // Mount and detect system theme
+    useEffect(() => {
+        setMounted(true);
+        const isDark = document.documentElement.classList.contains('dark') ||
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setSystemTheme(isDark ? 'dark' : 'light');
+
+        // Watch for theme changes on DOM
+        const observer = new MutationObserver(() => {
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            setSystemTheme(isDarkMode ? 'dark' : 'light');
+        });
+
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        return () => observer.disconnect();
+    }, []);
+
+    // Theme colors
+    const themeColors = theme === 'dark' ? {
+        background: '#0d1117',
+        textColor: '#9ca3af',
+        borderColor: 'rgba(139, 92, 246, 0.2)',
+        gridColor: 'rgba(139, 92, 246, 0.08)',
+        crosshairColor: 'rgba(139, 92, 246, 0.5)',
+        crosshairLabelBg: '#7c3aed',
+    } : {
+        background: '#ffffff',
+        textColor: '#4b5563',
+        borderColor: 'rgba(139, 92, 246, 0.1)',
+        gridColor: 'rgba(139, 92, 246, 0.05)',
+        crosshairColor: 'rgba(139, 92, 246, 0.3)',
+        crosshairLabelBg: '#8b5cf6',
+    };
 
     const intervalSec = INTERVAL_SECONDS[interval];
     const remaining = getRemainingSeconds(nowSec, intervalSec);
@@ -220,26 +262,26 @@ export default function TokenLightweightChart({
 
         const chart = createChart(containerRef.current, {
             layout: {
-                background: { type: ColorType.Solid, color: '#0d1117' },
-                textColor: '#9ca3af',
+                background: { type: ColorType.Solid, color: themeColors.background },
+                textColor: themeColors.textColor,
                 fontSize: 11,
             },
             grid: {
-                vertLines: { color: 'rgba(139, 92, 246, 0.08)' },
-                horzLines: { color: 'rgba(139, 92, 246, 0.08)' },
+                vertLines: { color: themeColors.gridColor },
+                horzLines: { color: themeColors.gridColor },
             },
             crosshair: {
                 mode: CrosshairMode.Normal,
-                vertLine: { color: 'rgba(139, 92, 246, 0.5)', labelBackgroundColor: '#7c3aed' },
-                horzLine: { color: 'rgba(139, 92, 246, 0.5)', labelBackgroundColor: '#7c3aed' },
+                vertLine: { color: themeColors.crosshairColor, labelBackgroundColor: themeColors.crosshairLabelBg },
+                horzLine: { color: themeColors.crosshairColor, labelBackgroundColor: themeColors.crosshairLabelBg },
             },
             rightPriceScale: {
-                borderColor: 'rgba(139, 92, 246, 0.2)',
+                borderColor: themeColors.borderColor,
                 scaleMargins: { top: 0.08, bottom: 0.22 },
                 autoScale: true,
             },
             timeScale: {
-                borderColor: 'rgba(139, 92, 246, 0.2)',
+                borderColor: themeColors.borderColor,
                 timeVisible: true,
                 // secondsVisible chỉ bật cho 1m
                 secondsVisible: false,
@@ -308,7 +350,7 @@ export default function TokenLightweightChart({
             candleSeriesRef.current = null;
             volumeSeriesRef.current = null;
         };
-    }, []);
+    }, [theme]);
 
     // secondsVisible chỉ bật cho 1m
     useEffect(() => {
@@ -394,8 +436,8 @@ export default function TokenLightweightChart({
 
     return (
         <div style={{
-            background: '#0d1117',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
+            background: themeColors.background,
+            border: `1px solid ${themeColors.borderColor}`,
             borderRadius: '0.75rem',
             overflow: 'hidden',
         }}>
@@ -405,21 +447,21 @@ export default function TokenLightweightChart({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '0.75rem 1rem',
-                borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
+                borderBottom: `1px solid ${themeColors.gridColor}`,
                 flexWrap: 'wrap',
                 gap: '0.5rem',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.05em' }}>
+                    <span style={{ color: themeColors.textColor === '#9ca3af' ? '#fff' : '#111827', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.05em' }}>
                         {symbol}
                     </span>
                     {/* Countdown badge - giống TradingView */}
                     <span style={{
-                        color: '#9ca3af',
+                        color: themeColors.textColor,
                         fontSize: '0.72rem',
                         fontWeight: 600,
-                        background: 'rgba(148, 163, 184, 0.1)',
-                        border: '1px solid rgba(148, 163, 184, 0.18)',
+                        background: theme === 'dark' ? 'rgba(148, 163, 184, 0.1)' : 'rgba(148, 163, 184, 0.15)',
+                        border: theme === 'dark' ? '1px solid rgba(148, 163, 184, 0.18)' : '1px solid rgba(148, 163, 184, 0.25)',
                         borderRadius: '0.3rem',
                         padding: '0.12rem 0.4rem',
                         fontVariantNumeric: 'tabular-nums',
@@ -452,9 +494,9 @@ export default function TokenLightweightChart({
                                 border: 'none',
                                 cursor: 'pointer',
                                 background: interval === iv
-                                    ? 'rgba(139, 92, 246, 0.45)'
-                                    : 'rgba(139, 92, 246, 0.07)',
-                                color: interval === iv ? '#fff' : '#9ca3af',
+                                    ? (theme === 'dark' ? 'rgba(139, 92, 246, 0.45)' : 'rgba(139, 92, 246, 0.25)')
+                                    : (theme === 'dark' ? 'rgba(139, 92, 246, 0.07)' : 'rgba(139, 92, 246, 0.05)'),
+                                color: interval === iv ? (theme === 'dark' ? '#fff' : '#111827') : themeColors.textColor,
                                 transition: 'all 0.15s',
                             }}
                         >
@@ -471,9 +513,9 @@ export default function TokenLightweightChart({
                     <div style={{
                         position: 'absolute', inset: 0, zIndex: 10,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(13, 17, 23, 0.75)',
+                        background: theme === 'dark' ? 'rgba(13, 17, 23, 0.75)' : 'rgba(255, 255, 255, 0.75)',
                     }}>
-                        <span style={{ color: '#9ca3af', fontSize: '0.85rem' }}>Loading chart...</span>
+                        <span style={{ color: themeColors.textColor, fontSize: '0.85rem' }}>Loading chart...</span>
                     </div>
                 )}
 
@@ -482,11 +524,11 @@ export default function TokenLightweightChart({
                         position: 'absolute', inset: 0, zIndex: 10,
                         display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(13, 17, 23, 0.85)',
+                        background: theme === 'dark' ? 'rgba(13, 17, 23, 0.85)' : 'rgba(255, 255, 255, 0.85)',
                         gap: '0.5rem',
                     }}>
-                        <span style={{ color: '#6b7280', fontSize: '0.9rem' }}>No trades yet</span>
-                        <span style={{ color: '#4b5563', fontSize: '0.75rem' }}>Waiting for the first trade</span>
+                        <span style={{ color: theme === 'dark' ? '#6b7280' : '#9ca3af', fontSize: '0.9rem' }}>No trades yet</span>
+                        <span style={{ color: theme === 'dark' ? '#4b5563' : '#b0b8c1', fontSize: '0.75rem' }}>Waiting for the first trade</span>
                     </div>
                 )}
 
