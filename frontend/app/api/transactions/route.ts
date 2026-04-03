@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
         const result = await query(
             `INSERT INTO transactions (token_id, from_address, to_address, amount, transaction_hash, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+       VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '7 hours')
        RETURNING *`,
             [token_id, from_address, to_address, amount, transaction_hash || null]
         );

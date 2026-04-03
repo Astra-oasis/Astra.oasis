@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
         const result = await query(
             `INSERT INTO tokens (name, symbol, description, image_url, social_link, total_supply, owner, contract_address, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW() + INTERVAL '7 hours')
        RETURNING *`,
             [name, symbol, description || null, image_url || null, social_link || null, totalSupply || 0, owner, contractAddress]
         );

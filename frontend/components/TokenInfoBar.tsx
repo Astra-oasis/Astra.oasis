@@ -78,20 +78,20 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
     const change6h = metrics ? parseFloat(metrics.price_change_6h) || 0 : 0;
 
     return (
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-pump-card border border-gray-800 rounded-lg p-4 mb-4 gap-4 md:gap-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white dark:bg-pump-card border border-gray-300 dark:border-gray-800 rounded-lg p-4 mb-4 gap-4 md:gap-8">
             {/* Left: Token Info */}
             <div className="flex items-center gap-4 flex-1">
                 <div className="flex flex-col">
-                    <h1 className="text-xl font-bold text-white">
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                         {coin.name}
                     </h1>
-                    <div className="text-lg text-gray-500 font-mono">
+                    <div className="text-lg text-gray-600 dark:text-gray-500 font-mono">
                         {coin.ticker}
                     </div>
                     <div className="flex items-center gap-3 text-xs mt-1">
                         <button
                             onClick={() => openExplorer(coin.creator)}
-                            className="bg-gray-800 text-gray-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-gray-700 transition-colors"
+                            className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
                             title="View creator on Oasis Explorer"
                         >
                             {coin.creator.slice(0, 6)}...{coin.creator.slice(-4)} <ExternalLink className="w-3 h-3" />
@@ -99,13 +99,13 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
                         {coin.contractAddress && (
                             <button
                                 onClick={() => openExplorer(coin.contractAddress!)}
-                                className="bg-gray-800 text-gray-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-gray-700 transition-colors"
+                                className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
                                 title="View contract on Oasis Explorer"
                             >
                                 {coin.contractAddress.slice(0, 6)}...{coin.contractAddress.slice(-4)} <ExternalLink className="w-3 h-3" />
                             </button>
                         )}
-                        <span className="text-gray-500">Created {new Date(coin.createdAt).toLocaleDateString()}</span>
+                        <span className="text-gray-600 dark:text-gray-500">Created {new Date(coin.createdAt).toLocaleDateString()}</span>
                     </div>
                 </div>
             </div>
@@ -114,38 +114,38 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
             <div className="flex gap-4 md:gap-6 flex-wrap md:flex-nowrap md:justify-end overflow-x-auto">
                 {loading ? (
                     <>
-                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
-                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
-                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
-                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
-                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
-                        <div className="animate-pulse h-12 bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-300 dark:bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-300 dark:bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-300 dark:bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-300 dark:bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-300 dark:bg-gray-800 rounded w-24"></div>
+                        <div className="animate-pulse h-12 bg-gray-300 dark:bg-gray-800 rounded w-24"></div>
                     </>
                 ) : (
                     <>
                         <div className="flex flex-col justify-center min-w-fit">
-                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                            <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase font-semibold tracking-wider">
                                 Market Cap
                             </div>
-                            <div className="text-lg font-bold text-white font-mono">
+                            <div className="text-lg font-bold text-gray-900 dark:text-white font-mono">
                                 ${marketCap ? (marketCap / 1000000).toFixed(2) : '0.00'}M
                             </div>
                         </div>
 
                         <div className="flex flex-col justify-center min-w-fit">
-                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                            <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase font-semibold tracking-wider">
                                 Vol 24h
                             </div>
-                            <div className="text-lg font-bold text-white font-mono">
+                            <div className="text-lg font-bold text-gray-900 dark:text-white font-mono">
                                 {formatVolume(volume)}
                             </div>
                         </div>
 
                         <div className="flex flex-col justify-center min-w-fit">
-                            <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                            <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase font-semibold tracking-wider">
                                 Price
                             </div>
-                            <div className="text-lg font-bold text-white font-mono">
+                            <div className="text-lg font-bold text-gray-900 dark:text-white font-mono">
                                 {formatPrice(price)}
                             </div>
                         </div>

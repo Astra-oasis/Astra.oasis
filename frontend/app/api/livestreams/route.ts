@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
         const result = await query(
             `INSERT INTO livestreams (user_address, title, token, thumbnail_url, avatar_url, viewers, is_active, created_at)
-             VALUES ($1, $2, $3, $4, $5, 0, true, NOW())
+             VALUES ($1, $2, $3, $4, $5, 0, true, NOW() + INTERVAL '7 hours')
              RETURNING *`,
             [user_address, title, token, thumbnail_url || '', avatar_url || '']
         );

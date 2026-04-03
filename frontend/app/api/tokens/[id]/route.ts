@@ -46,7 +46,7 @@ export async function PUT(
        SET name = COALESCE($1, name), 
            symbol = COALESCE($2, symbol),
            total_supply = COALESCE($3, total_supply),
-           updated_at = NOW()
+           updated_at = NOW() + INTERVAL '7 hours'
        WHERE id = $4
        RETURNING *`,
             [name, symbol, totalSupply, id]

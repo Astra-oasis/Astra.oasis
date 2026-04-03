@@ -256,12 +256,12 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
 
   return (
     <>
-      <div className="bg-pump-card border border-gray-800 rounded-lg overflow-hidden shadow-lg">
-        <div className="flex border-b border-gray-800">
+      <div className="bg-white dark:bg-pump-card border border-gray-300 dark:border-gray-800 rounded-lg overflow-hidden shadow-lg">
+        <div className="flex border-b border-gray-300 dark:border-gray-800">
           <button
             className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-all relative ${mode === 'buy'
-              ? 'text-pump-green bg-pump-green/5'
-              : 'text-gray-500 hover:text-gray-300 bg-gray-900/50'
+              ? 'text-pump-green bg-green-50 dark:bg-pump-green/5'
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-900/50'
               }`}
             onClick={() => setMode('buy')}
           >
@@ -270,8 +270,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
           </button>
           <button
             className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-all relative ${mode === 'sell'
-              ? 'text-pump-red bg-pump-red/5'
-              : 'text-gray-500 hover:text-gray-300 bg-gray-900/50'
+              ? 'text-pump-red bg-red-50 dark:bg-pump-red/5'
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 bg-gray-100 dark:bg-gray-900/50'
               }`}
             onClick={() => setMode('sell')}
           >
@@ -284,21 +284,21 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
           <div className="flex justify-between items-center text-xs">
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-white transition-colors bg-gray-900 px-2 py-1 rounded"
+              className="flex items-center gap-1.5 text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors bg-gray-200 dark:bg-gray-900 px-2 py-1 rounded"
             >
               <Settings className="w-3.5 h-3.5" />
               <span>Set max slippage</span>
             </button>
-            <div className="flex items-center gap-1 text-gray-500">
+            <div className="flex items-center gap-1 text-gray-600 dark:text-gray-500">
               <Wallet className="w-3.5 h-3.5" />
               <span>{mode === 'buy' ? `${parseFloat(balance).toFixed(4)} TEST` : `${parseFloat(tokenBalance).toFixed(2)} ${symbol}`}</span>
             </div>
           </div>
 
-          <div className="bg-gray-900/80 rounded-lg p-4 border border-gray-800 focus-within:border-pump-green/50 transition-colors">
-            <div className="flex justify-between text-xs font-bold text-gray-500 mb-2">
+          <div className="bg-gray-100 dark:bg-gray-900/80 rounded-lg p-4 border border-gray-300 dark:border-gray-800 focus-within:border-pump-green/50 transition-colors">
+            <div className="flex justify-between text-xs font-bold text-gray-600 dark:text-gray-500 mb-2">
               <span className="uppercase">{mode === 'buy' ? `Amount (${symbol})` : `Amount (${symbol})`}</span>
-              <span className="uppercase cursor-pointer hover:text-white" onClick={() => setAmount(mode === 'buy' ? '100' : tokenBalance)}>Max</span>
+              <span className="uppercase cursor-pointer hover:text-gray-900 dark:hover:text-white" onClick={() => setAmount(mode === 'buy' ? '100' : tokenBalance)}>Max</span>
             </div>
             <div className="flex items-center justify-between gap-4">
               <input
@@ -306,10 +306,10 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.0"
-                className="bg-transparent text-2xl font-mono font-bold w-full outline-none text-white placeholder-gray-700"
+                className="bg-transparent text-2xl font-mono font-bold w-full outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-700"
               />
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold bg-gray-800 px-2 py-1 rounded text-gray-300">
+                <span className="text-xs font-bold bg-gray-300 dark:bg-gray-800 px-2 py-1 rounded text-gray-700 dark:text-gray-300">
                   {symbol}
                 </span>
               </div>
@@ -319,12 +319,12 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
           {/* Quick Buttons */}
           {mode === 'buy' ? (
             <div className="flex gap-2">
-              <button onClick={() => setAmount('')} className="bg-gray-800 text-gray-500 hover:text-white px-3 py-2 rounded text-xs font-bold transition-colors">Reset</button>
+              <button onClick={() => setAmount('')} className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded text-xs font-bold transition-colors">Reset</button>
               {[10, 50, 100, 500].map((val) => (
                 <button
                   key={val}
                   onClick={() => setAmount(val.toString())}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-xs py-2 rounded text-gray-300 font-mono transition-colors border border-transparent hover:border-gray-600"
+                  className="flex-1 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-xs py-2 rounded text-gray-700 dark:text-gray-300 font-mono transition-colors border border-transparent hover:border-gray-400 dark:hover:border-gray-600"
                 >
                   {val} {symbol}
                 </button>
@@ -332,7 +332,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={() => setAmount('')} className="bg-gray-800 text-gray-500 hover:text-white px-3 py-2 rounded text-xs font-bold transition-colors">Reset</button>
+              <button onClick={() => setAmount('')} className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded text-xs font-bold transition-colors">Reset</button>
               {['25%', '50%', '75%', '100%'].map((val) => (
                 <button
                   key={val}
@@ -340,7 +340,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
                     const percent = parseInt(val) / 100;
                     setAmount((parseFloat(tokenBalance) * percent).toString());
                   }}
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-xs py-2 rounded text-gray-300 font-mono transition-colors border border-transparent hover:border-gray-600"
+                  className="flex-1 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-xs py-2 rounded text-gray-700 dark:text-gray-300 font-mono transition-colors border border-transparent hover:border-gray-400 dark:hover:border-gray-600"
                 >
                   {val}
                 </button>
@@ -349,24 +349,24 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
           )}
 
           {/* Summary Details */}
-          <div className="space-y-2 p-3 bg-gray-900/50 rounded-lg text-xs">
+          <div className="space-y-2 p-3 bg-gray-100 dark:bg-gray-900/50 rounded-lg text-xs border border-gray-300 dark:border-gray-800/50">
             {amount && parseFloat(amount) > 0 && parseFloat(estimatedCost) > 0 && (
               <div className={`flex justify-between items-center font-bold text-sm mb-2 pb-2 border-b ${mode === 'buy' ? 'border-pump-green/20' : 'border-pump-red/20'}`}>
-                <span className="text-white">{mode === 'buy' ? 'Total Cost:' : 'You Receive:'}</span>
+                <span className="text-gray-900 dark:text-white">{mode === 'buy' ? 'Total Cost:' : 'You Receive:'}</span>
                 <span className={`font-mono ${mode === 'buy' ? 'text-pump-green' : 'text-pump-red'}`}>
                   {parseFloat(estimatedCost).toFixed(6)} TEST
                 </span>
               </div>
             )}
-            <div className="flex justify-between items-center text-gray-500">
+            <div className="flex justify-between items-center text-gray-700 dark:text-gray-500">
               <span>Price Impact</span>
               <span className={`font-mono ${parseFloat(priceImpact) >= 0 ? 'text-pump-green' : 'text-pump-red'}`}>
                 {parseFloat(priceImpact) >= 0 ? '~' : ''}{parseFloat(priceImpact).toFixed(2)}%
               </span>
             </div>
-            <div className="flex justify-between items-center text-gray-500">
+            <div className="flex justify-between items-center text-gray-700 dark:text-gray-500">
               <span>Oasis Fee</span>
-              <span className="font-mono text-gray-400">{parseFloat(oasisFee).toFixed(6)} TEST</span>
+              <span className="font-mono text-gray-600 dark:text-gray-400">{parseFloat(oasisFee).toFixed(6)} TEST</span>
             </div>
           </div>
 

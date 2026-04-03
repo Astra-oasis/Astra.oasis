@@ -265,7 +265,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
 
   return (
     <div className="container mx-auto px-4 py-4 max-w-[1600px] animate-fade-in">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-white mb-4 text-sm font-bold uppercase transition-colors">
+      <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-500 dark:hover:text-white mb-4 text-sm font-bold uppercase transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to board
       </button>
 
@@ -283,16 +283,16 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
           />
 
           {/* Bonding Curve — full width, replaces AI Analysis */}
-          <div className="bg-pump-card border border-gray-800 rounded-lg p-5">
+          <div className="bg-white dark:bg-pump-card border border-gray-300 dark:border-gray-800 rounded-lg p-5">
             {/* Header row */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Bonding Curve Progress</h3>
+                <h3 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">Bonding Curve Progress</h3>
               </div>
               <div className="flex items-center gap-3 text-sm font-bold">
                 <span className="text-pump-green">{progress.toFixed(2)}%</span>
-                <span className="text-gray-600">·</span>
-                <span className="text-gray-400 text-xs font-mono">{pctRemaining}% to Graduate</span>
+                <span className="text-gray-400 dark:text-gray-600">·</span>
+                <span className="text-gray-600 dark:text-gray-400 text-xs font-mono">{pctRemaining}% to Graduate</span>
               </div>
             </div>
 
@@ -302,17 +302,17 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
             {/* Stats row */}
             <div className="mt-3 grid grid-cols-2 gap-4 text-xs font-mono">
               <div>
-                <div className="text-gray-600 uppercase tracking-wider mb-0.5">Collected</div>
-                <div className="text-white font-bold">{maxReserve.toFixed(4)} TEST</div>
+                <div className="text-gray-700 dark:text-gray-600 uppercase tracking-wider mb-0.5">Collected</div>
+                <div className="text-gray-900 dark:text-white font-bold">{maxReserve.toFixed(4)} TEST</div>
               </div>
               <div className="text-right">
-                <div className="text-gray-600 uppercase tracking-wider mb-0.5">Target</div>
-                <div className="text-gray-300 font-bold">10,000 TEST</div>
+                <div className="text-gray-700 dark:text-gray-600 uppercase tracking-wider mb-0.5">Target</div>
+                <div className="text-gray-900 dark:text-gray-300 font-bold">10,000 TEST</div>
               </div>
             </div>
 
             {/* Warning */}
-            <div className="mt-4 flex gap-3 items-start bg-yellow-900/10 border border-yellow-700/20 p-3 rounded text-[11px] text-yellow-500/80">
+            <div className="mt-4 flex gap-3 items-start bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-400 dark:border-yellow-700/30 p-3 rounded text-[11px] text-yellow-700 dark:text-yellow-500">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <p>
                 When the bonding curve reaches <b>10,000 TEST</b>, all liquidity will be deposited into{' '}
