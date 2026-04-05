@@ -5,6 +5,7 @@ import { ArrowLeft, Edit2, Copy, Check } from 'lucide-react';
 import Image from 'next/image';
 import { getWalletInfo } from '@/lib/walletHelper';
 import EditProfileModal from './EditProfileModal';
+import { Coin } from '@/types';
 
 interface WalletInfo {
   id: number;
@@ -32,9 +33,10 @@ interface ProfilePageProps {
   walletAddress: string;
   onBack: () => void;
   onProfileUpdated?: () => Promise<void>;
+  onCoinClick?: (coin: Coin) => void;
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProfileUpdated }) => {
+const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProfileUpdated, onCoinClick }) => {
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [testBalance, setTestBalance] = useState<number>(0);
   const [ownedCoinDetails, setOwnedCoinDetails] = useState<(CoinInfo & { quantity?: number; pricePerToken?: number })[]>([]);
@@ -43,6 +45,29 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
   const [purchasesLoading, setPurchasesLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Handler to navigate to coin detail
+  const handleCoinClick = useCallback((coin: CoinInfo & { quantity?: number; pricePerToken?: number; marketcap?: number }, isOwned: boolean) => {
+    if (onCoinClick) {
+      const coinData: Coin = {
+        id: String(coin.id),
+        name: coin.name,
+        ticker: coin.symbol,
+        description: '',
+        imageUrl: coin.image_url || `https://picsum.photos/200/200?random=${coin.id}`,
+        creator: walletAddress,
+        marketCap: coin.marketcap || 0,
+        replies: 0,
+        bondingCurveProgress: 0,
+        createdAt: new Date(coin.created_at || '').getTime(),
+        lastReply: new Date(coin.created_at || '').getTime(),
+        priceHistory: [],
+        tokenAddress: coin.contract_address,
+        contractAddress: coin.contract_address,
+      };
+      onCoinClick(coinData);
+    }
+  }, [onCoinClick, walletAddress]);
 
   // Memoize helper functions to prevent unnecessary recalculations
   const formatCompactNumber = useMemo(() => (num: any) => {
@@ -368,7 +393,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                 ownedCoinDetails.map((coin) => (
                   <div
                     key={coin.contract_address}
-                    className="bg-white dark:bg-gray-900/30 rounded-xl p-4 border border-gray-300 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-700 transition-colors flex items-center gap-4"
+                    onClick={() => handleCoinClick(coin, true)}
+                    className="bg-white dark:bg-gray-900/30 rounded-xl p-4 border border-gray-300 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-all cursor-pointer flex items-center gap-4"
                   >
                     <img
                       src={coin.image_url || 'https://picsum.photos/48/48'}
@@ -417,7 +443,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                 {mintedCoinDetails.map((coin) => (
                   <div
                     key={coin.contract_address}
-                    className="bg-white dark:bg-gray-900/30 rounded-xl p-4 border border-gray-300 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-700 transition-colors flex items-center gap-4"
+                    onClick={() => handleCoinClick(coin, false)}
+                    className="bg-white dark:bg-gray-900/30 rounded-xl p-4 border border-gray-300 dark:border-gray-800 hover:border-gray-400 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-all cursor-pointer flex items-center gap-4"
                   >
                     <img
                       src={coin.image_url || 'https://picsum.photos/48/48'}
