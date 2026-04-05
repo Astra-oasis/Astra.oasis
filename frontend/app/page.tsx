@@ -182,7 +182,7 @@ export default function Home() {
             <KingOfTheHill coin={topCoinByMarketCap} onClick={handleCoinClick} />
             <div className="mt-8">
               <FilterBar currentSort={sortOption} onSortChange={setSortOption} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
                 {sortedCoins.map(coin => <CoinCard key={coin.id} coin={coin} onClick={handleCoinClick} />)}
               </div>
             </div>

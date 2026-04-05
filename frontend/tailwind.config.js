@@ -19,7 +19,7 @@ module.exports = {
           card: '#1a1f2e',
           green: '#4ade80',
           red: '#f87171',
-          accent: '#8b5cf6', // Violet
+          accent: '#f87171', // Red (softer)
           text: '#e2e8f0'
         }
       },
@@ -27,6 +27,8 @@ module.exports = {
         'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'slide-in-fade': 'slide-in-fade 0.5s ease-out forwards',
         'fade-in': 'fade-in 0.3s ease-out forwards',
+        'float': 'float 3s ease-in-out infinite',
+        'shimmer': 'shimmer 2s infinite',
       },
       keyframes: {
         'slide-in-fade': {
@@ -45,6 +47,22 @@ module.exports = {
           },
           '100%': {
             opacity: '1'
+          }
+        },
+        'float': {
+          '0%, 100%': {
+            transform: 'translateY(0px)'
+          },
+          '50%': {
+            transform: 'translateY(-8px)'
+          }
+        },
+        'shimmer': {
+          '0%': {
+            transform: 'translateX(-100%)'
+          },
+          '100%': {
+            transform: 'translateX(100%)'
           }
         }
       },
