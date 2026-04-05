@@ -207,7 +207,7 @@ export default function Home() {
         {viewState === ViewState.LIVESTREAMS && <LivestreamsPage />}
         {viewState === ViewState.SUPPORT && <SupportPage />}
         {viewState === ViewState.PROFILE && address && (
-          <ProfilePage walletAddress={address} onBack={handleGoHome} onProfileUpdated={handleProfileUpdated} />
+          <ProfilePage walletAddress={address} onBack={handleGoHome} onProfileUpdated={handleProfileUpdated} onCoinClick={handleCoinClick} />
         )}
       </main>
     </div>
