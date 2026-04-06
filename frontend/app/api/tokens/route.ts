@@ -61,10 +61,15 @@ export async function GET(request: NextRequest) {
 
         const result = await query(sql, params.length > 0 ? params : undefined);
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             data: result.rows,
         });
+
+        // Cache tokens for 30 seconds to reduce database load
+        response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+
+        return response;
     } catch (error) {
         console.error('Error fetching tokens:', error);
         return NextResponse.json(
