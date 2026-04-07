@@ -98,7 +98,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
   const fetchTestBalance = useCallback(async (address: string) => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
       const response = await fetch('https://testnet.sapphire.oasis.io', {
         method: 'POST',
@@ -159,8 +159,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
       setMintedCoinDetails(mintedCoins);
       setInitialLoadDone(true); // Show UI immediately with owned coins loading
 
-      // Fetch purchase details in background
+      // Fetch purchase details in background - only show coins with quantity > 0
       if (ownedCoins.length > 0) {
+        setPurchasesLoading(true);
         fetchPurchaseDetails(ownedCoins);
       } else {
         setOwnedCoinDetails([]);
@@ -173,45 +174,53 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
 
   const fetchPurchaseDetails = useCallback(async (coins: any[]) => {
     try {
-      const coinsWithQuantity = await Promise.all(
-        coins.map(async (coin: any) => {
-          try {
-            const purchaseRes = await fetch(`/api/purchases?wallet_address=${walletAddress}&contract_address=${coin.contract_address}`);
-            const purchaseData = await purchaseRes.json();
-            
-            // Calculate: total bought - total sold
-            let totalBought = 0;
-            let totalSold = 0;
-            let avgPrice = 0;
-            
-            if (purchaseData.data && purchaseData.data.length > 0) {
-              purchaseData.data.forEach((p: any) => {
-                const qty = parseFloat(p.quantity) || 0;
-                if (p.buyer_address && p.buyer_address.toLowerCase() === walletAddress.toLowerCase()) {
-                  totalBought += qty;
-                }
-                if (p.seller_address && p.seller_address.toLowerCase() === walletAddress.toLowerCase()) {
-                  totalSold += qty;
-                }
-              });
-              // Use first buy transaction's price as average
-              const buyTransaction = purchaseData.data.find((p: any) => 
-                p.buyer_address && p.buyer_address.toLowerCase() === walletAddress.toLowerCase()
-              );
-              avgPrice = buyTransaction ? (parseFloat(buyTransaction.price_per_token) || 0) : 0;
+      // Fetch ALL purchases for wallet in ONE request (not per-coin)
+      const allPurchasesRes = await fetch(`/api/purchases?wallet_address=${walletAddress}`);
+      const allPurchasesData = await allPurchasesRes.json();
+
+      if (!allPurchasesData.data) {
+        setOwnedCoinDetails([]);
+        return;
+      }
+
+      // Process all purchases once and map to coins
+      const coinsWithQuantity = coins.map((coin: any) => {
+        let totalBought = 0;
+        let totalSold = 0;
+        let avgPrice = 0;
+
+        // Filter purchases for this specific coin
+        const coinPurchases = allPurchasesData.data.filter(
+          (p: any) => p.contract_address && p.contract_address.toLowerCase() === coin.contract_address.toLowerCase()
+        );
+
+        if (coinPurchases.length > 0) {
+          coinPurchases.forEach((p: any) => {
+            const qty = parseFloat(p.quantity) || 0;
+            if (p.buyer_address && p.buyer_address.toLowerCase() === walletAddress.toLowerCase()) {
+              totalBought += qty;
             }
-            
-            const netQuantity = totalBought - totalSold;
-            return { ...coin, quantity: netQuantity > 0 ? netQuantity : 0, pricePerToken: avgPrice };
-          } catch (e) {
-            console.error(`Error fetching purchases for ${coin.symbol}:`, e);
-            return { ...coin, quantity: 0, pricePerToken: 0 };
-          }
-        })
-      );
+            if (p.seller_address && p.seller_address.toLowerCase() === walletAddress.toLowerCase()) {
+              totalSold += qty;
+            }
+          });
+          // Use first buy transaction's price as average
+          const buyTransaction = coinPurchases.find((p: any) =>
+            p.buyer_address && p.buyer_address.toLowerCase() === walletAddress.toLowerCase()
+          );
+          avgPrice = buyTransaction ? (parseFloat(buyTransaction.price_per_token) || 0) : 0;
+        }
+
+        const netQuantity = totalBought - totalSold;
+        return { ...coin, quantity: netQuantity > 0 ? netQuantity : 0, pricePerToken: avgPrice };
+      });
+
       // Filter out coins with quantity = 0
       const filteredCoins = coinsWithQuantity.filter(coin => coin.quantity > 0);
       setOwnedCoinDetails(filteredCoins);
+    } catch (e) {
+      console.error('Error fetching purchase details:', e);
+      setOwnedCoinDetails([]);
     } finally {
       setPurchasesLoading(false);
     }
@@ -382,7 +391,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-pump-green">
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
                     -
                   </p>
                 </div>
@@ -408,7 +417,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-pump-green">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
                         {formatCompactNumber(Number(((coin as any).pricePerToken || 0) * ((coin as any).quantity || 0)))} TEST
                       </p>
                     </div>
@@ -456,7 +465,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                       <p className="text-xs text-gray-600 dark:text-gray-400">{coin.symbol}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-pump-accent">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
                         ${formatCompactNumber(coin.marketcap)}
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
