@@ -1,7 +1,5 @@
 import React from 'react';
 import { Coin } from '../types';
-import BondingCurve from './BondingCurve';
-import { MessageSquare } from 'lucide-react';
 import { formatMarketCap } from '../utils/formatters';
 
 interface CoinCardProps {
@@ -9,49 +7,73 @@ interface CoinCardProps {
   onClick: (coin: Coin) => void;
 }
 
+const getTimeAgo = (timestamp: number) => {
+  const diffInMs = Date.now() - timestamp;
+  const diffInMins = Math.floor(diffInMs / 60000);
+  if (diffInMins < 60) return `${Math.max(1, diffInMins)}m ago`;
+  const diffInHours = Math.floor(diffInMins / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays}d ago`;
+};
+
 const CoinCard: React.FC<CoinCardProps> = ({ coin, onClick }) => {
+  // Sử dụng trực tiếp bondingCurveProgress thay vì số ngẫu nhiên
+  const priceChange = coin.bondingCurveProgress || 0;
+  
+  // Progress bar logic: yellow if bonding curve is high like in the screenshot
+  const progressCls = coin.bondingCurveProgress > 80 ? 'bg-yellow-400' : 'bg-pump-green';
+
   return (
     <div
       onClick={() => onClick(coin)}
-      className="bg-white dark:bg-pump-card border border-gray-300 dark:border-gray-800 rounded-xl overflow-hidden cursor-pointer hover:border-pump-accent dark:hover:border-pump-accent transition-all duration-300 hover:scale-[1.08] group animate-float shadow-sm hover:shadow-lg"
+      className="flex cursor-pointer transition-colors duration-200 group"
     >
-      <div className="relative aspect-square overflow-hidden bg-gray-200 dark:bg-gray-800">
-        {/* Shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-shimmer pointer-events-none"></div>
-        
+      <div className="w-[124px] h-[124px] rounded-[10px] shrink-0 overflow-hidden bg-gray-200 dark:bg-gray-800">
         <img
           src={coin.imageUrl}
           alt={coin.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 group-hover:brightness-110"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
       </div>
 
-      <div className="p-1.5">
-        <div className="flex justify-between items-start mb-0.5">
-          <h3 className="font-bold text-xs text-gray-900 dark:text-white group-hover:text-pump-accent transition-colors duration-300 truncate flex-1">{coin.name}</h3>
-          <span className="text-[10px] text-gray-600 dark:text-gray-500 font-mono ml-0.5 shrink-0 group-hover:text-pump-accent transition-colors duration-300">{coin.ticker}</span>
+      <div className="flex flex-col flex-1 pl-3 pt-0.5 min-w-0">
+        <h3 className="font-bold text-gray-900 dark:text-white text-[15px] truncate">
+          {coin.name}
+        </h3>
+        
+        <div className="text-gray-500 dark:text-gray-400 text-[13px] truncate -mt-0.5 mb-[2px]">
+          {coin.ticker}
         </div>
 
-        <p className="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-1 mb-1 h-5">
-          {coin.description}
-        </p>
+        <div className="flex items-center text-gray-500 dark:text-gray-400 text-[12px] truncate space-x-[4px] mb-[3px]">
+          <span className="text-[12px]">🐸</span>
+          <span className="truncate max-w-[80px]">
+            {coin.creator.slice(0, 6)}
+          </span>
+          <span>{getTimeAgo(coin.createdAt)}</span>
+        </div>
 
-        <div className="space-y-1">
-          <div className="flex justify-between items-center text-[9px] text-gray-600 dark:text-gray-500 font-bold uppercase group-hover:text-pump-accent transition-colors duration-300">
-            <span>Bonding Curve</span>
-            <span>{coin.bondingCurveProgress}%</span>
+        <div className="flex items-center space-x-2 text-[12.5px] whitespace-nowrap mb-1">
+          <div className="flex items-center text-[13px]">
+            <span className="mr-[4px] font-medium text-gray-500 uppercase">MC</span>
+            <span className="font-bold text-gray-900 dark:text-white">{formatMarketCap(coin.marketCap)}</span>
           </div>
-          <BondingCurve progress={coin.bondingCurveProgress} />
 
-          <div className="flex justify-between items-center pt-0.5 border-t border-gray-300 dark:border-gray-800/50 group-hover:border-pump-accent/50 transition-colors duration-300">
-            <div className="flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-500 group-hover:text-pump-accent transition-colors duration-300">
-              <MessageSquare className="w-3 h-3" />
-              {coin.replies}
-            </div>
-            <div className="text-[10px] text-gray-600 dark:text-gray-500 group-hover:text-pump-accent transition-colors duration-300">
-              Created by {coin.creator.slice(0, 4)}...{coin.creator.slice(-4)}
-            </div>
+          <div className="w-9 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-sm overflow-hidden flex-shrink-0">
+            <div 
+              className={`h-full ${progressCls}`}
+              style={{ width: `${coin.bondingCurveProgress}%` }}
+            />
           </div>
+
+          <div className="font-medium text-pump-green">
+            ↑ {priceChange.toFixed(2)}%
+          </div>
+        </div>
+
+        <div className="text-gray-500 dark:text-gray-400 text-[12px] truncate">
+          {coin.description ? coin.description : `https://axiom.trade/@${coin.ticker.toLowerCase()}`}
         </div>
       </div>
     </div>

@@ -391,7 +391,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-pump-green">
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
                     -
                   </p>
                 </div>
@@ -417,7 +417,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-pump-green">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
                         {formatCompactNumber(Number(((coin as any).pricePerToken || 0) * ((coin as any).quantity || 0)))} TEST
                       </p>
                     </div>
@@ -465,7 +465,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ walletAddress, onBack, onProf
                       <p className="text-xs text-gray-600 dark:text-gray-400">{coin.symbol}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-pump-accent">
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">
                         ${formatCompactNumber(coin.marketcap)}
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">
