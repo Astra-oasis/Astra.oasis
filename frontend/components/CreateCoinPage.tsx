@@ -8,7 +8,7 @@ import { FACTORY_ABI, FACTORY_ADDRESS } from '../abi/factoryAbi';
 
 interface CreateCoinPageProps {
   onCancel: () => void;
-  onTokenCreated?: (tokenAddress: string) => void;
+  onTokenCreated?: (tokenAddress: string, tokenName: string, tokenSymbol: string) => void;
 }
 
 interface TokenForm {
@@ -213,14 +213,11 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
               if (txResponse.ok) {
                 const txData = await txResponse.json();
                 console.log('✅ Transaction saved to database:', txData);
-                alert('✅ Token created and saved successfully!');
               } else {
                 console.error('⚠️ Transaction save failed');
-                alert('✅ Token created! (transaction logging failed)');
               }
             } catch (txError) {
               console.error('Error saving transaction:', txError);
-              alert('✅ Token created! (transaction logging had an error)');
             }
           } else {
             try {
@@ -237,7 +234,7 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
           alert('Token created but failed to save to database');
         }
 
-        if (onTokenCreated) onTokenCreated(tokenAddress);
+        if (onTokenCreated) onTokenCreated(tokenAddress, form.name.trim(), form.symbol.trim());
       } else {
         alert('Token created but address not found in logs');
       }
