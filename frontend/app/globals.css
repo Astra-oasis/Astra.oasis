@@ -97,12 +97,81 @@ body {
   }
 }
 
+@keyframes hero-glow {
+  0%,
+  100% {
+    box-shadow: 0 18px 50px -34px rgba(250, 204, 21, 0.35);
+  }
+
+  50% {
+    box-shadow: 0 24px 70px -30px rgba(250, 204, 21, 0.55);
+  }
+}
+
+@keyframes hero-shimmer {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.5;
+  }
+
+  60% {
+    opacity: 0.18;
+  }
+
+  100% {
+    transform: translateX(140%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulse-border {
+  0%,
+  100% {
+    border-color: rgba(250, 204, 21, 0.22);
+  }
+
+  50% {
+    border-color: rgba(250, 204, 21, 0.42);
+  }
+}
+
 .animate-slide-in-fade {
   animation: slide-in-fade 1s ease-out forwards;
 }
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-hero-glow {
+  animation: hero-glow 3.6s ease-in-out infinite;
+}
+
+.animate-hero-shimmer {
+  animation: hero-shimmer 4.8s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float-slow 4.4s ease-in-out infinite;
+}
+
+.animate-pulse-border {
+  animation: pulse-border 3.2s ease-in-out infinite;
 }
 
 /* Prevent layout shift and ensure stable table layout */
