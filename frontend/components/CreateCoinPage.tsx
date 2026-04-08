@@ -8,7 +8,7 @@ import { FACTORY_ABI, FACTORY_ADDRESS } from '../abi/factoryAbi';
 
 interface CreateCoinPageProps {
   onCancel: () => void;
-  onTokenCreated?: (tokenAddress: string) => void;
+  onTokenCreated?: (tokenAddress: string, tokenName: string, tokenSymbol: string) => void;
 }
 
 interface TokenForm {
@@ -213,14 +213,11 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
               if (txResponse.ok) {
                 const txData = await txResponse.json();
                 console.log('✅ Transaction saved to database:', txData);
-                alert('✅ Token created and saved successfully!');
               } else {
                 console.error('⚠️ Transaction save failed');
-                alert('✅ Token created! (transaction logging failed)');
               }
             } catch (txError) {
               console.error('Error saving transaction:', txError);
-              alert('✅ Token created! (transaction logging had an error)');
             }
           } else {
             try {
@@ -237,7 +234,7 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
           alert('Token created but failed to save to database');
         }
 
-        if (onTokenCreated) onTokenCreated(tokenAddress);
+        if (onTokenCreated) onTokenCreated(tokenAddress, form.name.trim(), form.symbol.trim());
       } else {
         alert('Token created but address not found in logs');
       }
@@ -249,8 +246,13 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
     }
   };
 
+  const previewName = form.name.trim() || 'Your Coin';
+  const previewTicker = form.symbol.trim() || '$TICK';
+  const previewDescription = form.description.trim() || 'Token description preview will appear here.';
+  const previewCreator = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '0x...';
+
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 animate-fade-in">
+    <div className="max-w-5xl mx-auto py-8 px-4 animate-fade-in">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2">Launch on Oasis</h1>
         <p className="text-gray-600 dark:text-gray-400">Deploy your token on Oasis Sapphire instantly. No presale, no team allocation.</p>
@@ -260,79 +262,110 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
 
         <div className="grid gap-8">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Token Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Based Rose"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-3 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors"
-                />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+            <div className="space-y-6 xl:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Token Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Based Rose"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-3 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Ticker</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. $ROSE"
+                    value={form.symbol}
+                    onChange={(e) => setForm({ ...form, symbol: e.target.value })}
+                    className="w-full rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-3 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors"
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Ticker</label>
-                <input
-                  type="text"
-                  placeholder="e.g. $ROSE"
-                  value={form.symbol}
-                  onChange={(e) => setForm({ ...form, symbol: e.target.value })}
-                  className="w-full rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-3 text-gray-900 dark:text-white focus:border-blue-500 outline-none transition-colors"
+                <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Description <span className="text-red-600 dark:text-red-400">*</span></label>
+                <textarea
+                  placeholder="Tell the world why this token will flip ETH..."
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className="w-full rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-3 text-gray-900 dark:text-white focus:border-blue-500 outline-none h-32 transition-colors resize-none"
                 />
+                <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">{form.description.length} characters</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Token Image <span className="text-red-600 dark:text-red-400">*</span></label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <div
+                  onDragEnter={handleDragDrop}
+                  onDragOver={handleDragDrop}
+                  onDragLeave={handleDragDrop}
+                  onDrop={handleDragDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center cursor-pointer transition-all bg-gray-100 dark:bg-gray-900/50 ${
+                    form.imageUrl 
+                      ? 'border-green-500/50' 
+                      : 'border-gray-400 dark:border-gray-700 hover:border-blue-500 hover:text-blue-500'
+                  } ${!form.imageUrl && 'text-gray-600 dark:text-gray-500'}`}
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-10 h-10 mb-3 animate-spin" />
+                      <span className="text-sm font-medium">Uploading...</span>
+                    </>
+                  ) : form.imageUrl ? (
+                    <>
+                      <img src={form.imageUrl} alt="Token" className="w-20 h-20 rounded-lg mb-3 object-cover" />
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Change Image</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-10 h-10 mb-3" />
+                      <span className="text-sm font-medium">Drag and drop or click to upload</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-600 mt-1">PNG, JPG, GIF up to 5MB</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Description <span className="text-red-600 dark:text-red-400">*</span></label>
-              <textarea
-                placeholder="Tell the world why this token will flip ETH..."
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-3 text-gray-900 dark:text-white focus:border-blue-500 outline-none h-32 transition-colors resize-none"
-              />
-              <p className="text-xs text-gray-600 dark:text-gray-500 mt-1">{form.description.length} characters</p>
-            </div>
+            <div className="xl:sticky xl:top-24">
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Live Preview</p>
+              <div className="rounded-xl border border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-[#0b1324] p-4 shadow-lg">
+                <div className="flex gap-4">
+                  <div className="w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-gray-200 dark:bg-gray-800">
+                    {form.imageUrl ? (
+                      <img src={form.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs font-semibold">No Image</div>
+                    )}
+                  </div>
 
-            <div>
-              <label className="block text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Token Image <span className="text-red-600 dark:text-red-400">*</span></label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <div
-                onDragEnter={handleDragDrop}
-                onDragOver={handleDragDrop}
-                onDragLeave={handleDragDrop}
-                onDrop={handleDragDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center cursor-pointer transition-all bg-gray-100 dark:bg-gray-900/50 ${
-                  form.imageUrl 
-                    ? 'border-green-500/50' 
-                    : 'border-gray-400 dark:border-gray-700 hover:border-blue-500 hover:text-blue-500'
-                } ${!form.imageUrl && 'text-gray-600 dark:text-gray-500'}`}
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-10 h-10 mb-3 animate-spin" />
-                    <span className="text-sm font-medium">Uploading...</span>
-                  </>
-                ) : form.imageUrl ? (
-                  <>
-                    <img src={form.imageUrl} alt="Token" className="w-20 h-20 rounded-lg mb-3 object-cover" />
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Change Image</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-10 h-10 mb-3" />
-                    <span className="text-sm font-medium">Drag and drop or click to upload</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-600 mt-1">PNG, JPG, GIF up to 5MB</span>
-                  </>
-                )}
+                  <div className="min-w-0">
+                    <p className="text-xl font-black text-gray-900 dark:text-white truncate">{previewName}</p>
+                    <p className="text-sm tracking-wide text-gray-500 dark:text-gray-400 truncate">{previewTicker}</p>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                      <span>🐸</span>
+                      <span className="truncate">{previewCreator}</span>
+                      <span className="text-gray-400">just now</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-sm text-gray-700 dark:text-gray-300 line-clamp-2 break-words">
+                  {previewDescription}
+                </p>
               </div>
             </div>
           </div>

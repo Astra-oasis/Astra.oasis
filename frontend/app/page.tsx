@@ -196,8 +196,9 @@ export default function Home() {
         {viewState === ViewState.CREATE && (
           <CreateCoinPage
             onCancel={handleGoHome}
-            onTokenCreated={(addr) => {
-              addToast('success', 'Token Created', `Address: ${addr}`);
+            onTokenCreated={(addr, tokenName, tokenSymbol) => {
+              const shortAddress = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+              addToast('success', `Launched ${tokenSymbol}`, `${tokenName} is live on-chain. Contract ${shortAddress}`);
               fetchRealTokens();
               handleGoHome();
             }}
