@@ -61,7 +61,7 @@ const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
                 <div className="mt-4 w-full">
                    <div className="flex justify-between text-sm text-yellow-600 dark:text-yellow-400 mb-1 font-bold">
                         <span className="uppercase">Bonding Curve Progress</span>
-                        <span>{coin.bondingCurveProgress}%</span>
+                        <span>{coin.bondingCurveProgress.toFixed(4)}%</span>
                    </div>
                    <div className="relative h-4 bg-gray-300 dark:bg-gray-800 rounded-full overflow-hidden border border-yellow-400 dark:border-yellow-400/30 mb-2">
                         <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,0.35)_45%,transparent_60%)] bg-[length:200%_100%] opacity-80 animate-hero-shimmer" />

@@ -253,6 +253,25 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Buy' : 'Sell'} ${amount} ${symbol}`);
       setAmount('');
       loadBalances();
+
+      // Auto-add token to MetaMask after buy
+      if (mode === 'buy' && coin.tokenAddress) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_watchAsset',
+            params: {
+              type: 'ERC20',
+              options: {
+                address: coin.tokenAddress,
+                symbol: coin.ticker.slice(0, 11),
+                decimals: 18,
+                image: coin.imageUrl || '',
+              },
+            },
+          });
+        } catch { /* user dismissed, silent */ }
+      }
+
       if (onSuccess) await onSuccess(mode, parseFloat(returnAmount));
     } catch (error: any) {
       console.error('Trade error:', error);

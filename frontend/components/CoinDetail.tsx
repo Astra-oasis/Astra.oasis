@@ -39,7 +39,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
   const commentsEventSourceRef = useRef<EventSource | null>(null);
 
   const progress = Math.min(100, (maxReserve / BONDING_TARGET) * 100);
-  const pctRemaining = (100 - progress).toFixed(2);
+  const pctRemaining = (100 - progress).toFixed(4);
 
   const getProvider = async () => {
     let ethereum = window.ethereum;
@@ -290,7 +290,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
                 <h3 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">Bonding Curve Progress</h3>
               </div>
               <div className="flex items-center gap-3 text-sm font-bold">
-                <span className="text-pump-green">{progress.toFixed(2)}%</span>
+                <span className="text-pump-green">{progress.toFixed(4)}%</span>
                 <span className="text-gray-400 dark:text-gray-600">·</span>
                 <span className="text-gray-600 dark:text-gray-400 text-xs font-mono">{pctRemaining}% to Graduate</span>
               </div>

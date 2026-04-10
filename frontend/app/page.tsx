@@ -182,7 +182,7 @@ export default function Home() {
             <KingOfTheHill coin={topCoinByMarketCap} onClick={handleCoinClick} />
             <div className="mt-8">
               <FilterBar currentSort={sortOption} onSortChange={setSortOption} />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {sortedCoins.map(coin => <CoinCard key={coin.id} coin={coin} onClick={handleCoinClick} />)}
               </div>
             </div>
@@ -196,9 +196,8 @@ export default function Home() {
         {viewState === ViewState.CREATE && (
           <CreateCoinPage
             onCancel={handleGoHome}
-            onTokenCreated={(addr, tokenName, tokenSymbol) => {
-              const shortAddress = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-              addToast('success', `Launched ${tokenSymbol}`, `${tokenName} is live on-chain. Contract ${shortAddress}`);
+            onTokenCreated={(addr) => {
+              addToast('success', 'Token Created', `Address: ${addr}`);
               fetchRealTokens();
               handleGoHome();
             }}
@@ -208,7 +207,7 @@ export default function Home() {
         {viewState === ViewState.LIVESTREAMS && <LivestreamsPage />}
         {viewState === ViewState.SUPPORT && <SupportPage />}
         {viewState === ViewState.PROFILE && address && (
-          <ProfilePage walletAddress={address} onBack={handleGoHome} onProfileUpdated={handleProfileUpdated} onCoinClick={handleCoinClick} />
+          <ProfilePage walletAddress={address} onBack={handleGoHome} onProfileUpdated={handleProfileUpdated} />
         )}
       </main>
     </div>
