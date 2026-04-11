@@ -12,7 +12,7 @@ node_modules/
 # Next.js
 .next/
 out/
-
+AI/
 # Build outputs
 dist/
 build/
