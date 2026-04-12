@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Header, { type HeaderRef } from '../components/Header';
 import KingOfTheHill from '../components/KingOfTheHill';
+import TrendingCoins from '../components/TrendingCoins';
 import CoinCard from '../components/CoinCard';
 import FilterBar from '../components/FilterBar';
 import Toast, { ToastMessage } from '../components/Toast';
@@ -138,11 +139,14 @@ export default function Home() {
             priceChange1h: token.price_change_1h !== undefined && token.price_change_1h !== null ? parseFloat(token.price_change_1h) : null,
             priceChange6h: token.price_change_6h !== undefined && token.price_change_6h !== null ? parseFloat(token.price_change_6h) : null,
             traderCount: parseInt(token.computed_trader_count ?? token.trader_count) || 0,
+            lastTradeType: token.last_trade_type ?? null,
             replies: 0,
             bondingCurveProgress,
             createdAt: new Date(token.created_at).getTime(),
             lastReply: new Date(token.created_at).getTime(),
-            priceHistory: [],
+            priceHistory: token.price_snapshot_value
+              ? [{ time: '', price: parseFloat(token.price_snapshot_value) }]
+              : [],
             tokenAddress: token.contract_address,
             contractAddress: token.contract_address,
           };
@@ -167,6 +171,27 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [viewState]);
 
+  // Refresh metrics cho tất cả tokens khi ở table mode
+  useEffect(() => {
+    if (viewState !== ViewState.GRID || listMode !== 'table') return;
+
+    const refreshAllMetrics = async () => {
+      await Promise.all(
+        realTokens.map(coin =>
+          fetch('/api/tokens/calculate-metrics', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token_id: coin.id }),
+          }).catch(() => {})
+        )
+      );
+      fetchRealTokens();
+    };
+
+    refreshAllMetrics();
+    const interval = setInterval(refreshAllMetrics, 15000);
+    return () => clearInterval(interval);
+  }, [viewState, listMode]);
   const topCoinByMarketCap = useMemo(() => {
     const coins = [...realTokens];
     return coins.length > 0 ? coins.sort((a, b) => b.marketCap - a.marketCap)[0] : null;
@@ -190,23 +215,34 @@ export default function Home() {
         setTableSparkPaths({});
         return;
       }
-
       const entries = await Promise.all(
         sortedCoins.map(async (coin) => {
           try {
-            const fiveMinuteResponse = await fetch(`/api/ohlcv?tokenId=${coin.id}&interval=5m`);
-            const fiveMinuteData = await fiveMinuteResponse.json();
+            // Chọn interval theo tuổi token để full history fit vừa sparkline
+            const ageMs = Date.now() - coin.createdAt;
+            const ageHours = ageMs / 3_600_000;
+            const sparkInterval =
+              ageHours < 2   ? '1m'  :
+              ageHours < 12  ? '5m'  :
+              ageHours < 72  ? '15m' :
+              ageHours < 336 ? '1h'  : '4h';
 
-            const fiveMinuteCandles = (Array.isArray(fiveMinuteData?.data) ? fiveMinuteData.data : []) as OhlcvCandle[];
+            const res = await fetch(`/api/ohlcv?tokenId=${coin.id}&interval=${sparkInterval}`);
+            const data = await res.json();
+
+            const fiveMinuteCandles = (Array.isArray(data?.data) ? data.data : []) as OhlcvCandle[];
 
             const sparkCloses = fiveMinuteCandles
               .map((candle) => Number(candle.close))
               .filter((close) => Number.isFinite(close) && close > 0);
-
             const path = sparkCloses.length >= 2
               ? buildSparkPathFromValues(sparkCloses)
               : 'M0 20 L132 20'; // flat line nếu chưa có trade
-            const dir = sparkCloses.length >= 2 && sparkCloses[sparkCloses.length - 1] >= sparkCloses[0] ? 'up' : 'down';
+            const dir = sparkCloses.length >= 2
+              ? (sparkCloses[sparkCloses.length - 1] > sparkCloses[0] ? 'up'
+                : sparkCloses[sparkCloses.length - 1] < sparkCloses[0] ? 'down'
+                : 'flat')
+              : 'flat';
 
             return [
               [String(coin.id), path],
@@ -227,9 +263,11 @@ export default function Home() {
     };
 
     void loadTableSparkPaths();
+    const sparkInterval = listMode === 'table' ? setInterval(() => { void loadTableSparkPaths(); }, 15000) : null;
 
     return () => {
       cancelled = true;
+      if (sparkInterval) clearInterval(sparkInterval);
     };
   }, [listMode, sortedCoins]);
 
@@ -294,6 +332,7 @@ export default function Home() {
         {viewState === ViewState.GRID && (
           <>
             <KingOfTheHill coin={topCoinByMarketCap} onClick={handleCoinClick} />
+            <TrendingCoins onClick={handleCoinClick} />
             <div className="mt-8">
               <FilterBar
                 currentSort={sortOption}
@@ -358,7 +397,9 @@ export default function Home() {
                               {(() => {
                                 const path = tableSparkPaths[String(coin.id)];
                                 if (!path) return <div className="h-10 w-[132px] rounded bg-gray-200/60 dark:bg-[#1a2231]" />;
-                                const sparkColor = tableSparkPaths[String(coin.id) + '_dir'] === 'down' ? '#ef5350' : '#26a69a';
+                                const sparkColor = tableSparkPaths[String(coin.id) + '_dir'] === 'down' ? '#ef5350'
+                                  : tableSparkPaths[String(coin.id) + '_dir'] === 'up' ? '#26a69a'
+                                  : '#6b7280';
                                 const gradId = `sg-${coin.id}`;
                                 const fillPath = path + ' L132 40 L0 40 Z';
                                 return (

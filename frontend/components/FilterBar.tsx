@@ -34,7 +34,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
     <div className="flex flex-col gap-4 mb-6 text-sm">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex bg-white dark:bg-pump-card rounded border border-gray-300 dark:border-gray-800 p-1">
-          <button className="px-4 py-1 bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white rounded shadow text-xs font-bold">Following</button>
+          <button className="px-4 py-1 bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white rounded shadow text-xs font-bold">New</button>
           <button className="px-4 py-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-bold">Terminal</button>
         </div>
 

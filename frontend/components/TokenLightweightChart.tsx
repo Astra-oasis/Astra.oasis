@@ -535,13 +535,6 @@ export default function TokenLightweightChart({
                             {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
                         </span>
                     )}
-                    <span style={{
-                        color: themeColors.textColor,
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                    }}>
-                        Vol 24h: {vol24h}
-                    </span>
                 </div>
 
                 {/* Interval buttons */}

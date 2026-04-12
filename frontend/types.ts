@@ -18,6 +18,7 @@ export interface Coin {
   priceChange1h?: number;
   priceChange6h?: number;
   traderCount?: number;
+  lastTradeType?: 'buy' | 'sell' | null;
 }
 
 export interface Comment {

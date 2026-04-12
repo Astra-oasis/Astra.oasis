@@ -1,7 +1,7 @@
 import React from 'react';
 import { Coin } from '../types';
 import { Crown } from 'lucide-react';
-import { formatMarketCap } from '../utils/formatters';
+import { formatMarketCap, formatVolume } from '../utils/formatters';
 
 interface KingOfTheHillProps {
   coin: Coin | null;
@@ -55,7 +55,26 @@ const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
             <div className="flex-1 text-center md:text-left">
                 <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-1">{coin.name}</h3>
                 <p className="text-xl font-mono text-yellow-700 dark:text-yellow-200/80 mb-3">{coin.ticker}</p>
-                <p className="text-yellow-700 dark:text-yellow-200/80 text-lg mb-4 font-medium">MC: {formatMarketCap(coin.marketCap)}</p>
+                <div className="w-full flex justify-between mb-4">
+                    <div className="flex flex-col items-center">
+                        <span className="text-[11px] text-yellow-600/70 dark:text-yellow-500/60 uppercase tracking-wider font-semibold">MC</span>
+                        <span className="text-yellow-700 dark:text-yellow-200/90 font-black text-base">{formatMarketCap(coin.marketCap)}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <span className="text-[11px] text-yellow-600/70 dark:text-yellow-500/60 uppercase tracking-wider font-semibold">24H VOL</span>
+                        <span className="text-yellow-700 dark:text-yellow-200/90 font-black text-base">{formatVolume(coin.volume24h ?? 0)}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <span className="text-[11px] text-yellow-600/70 dark:text-yellow-500/60 uppercase tracking-wider font-semibold">Price</span>
+                        <span className="text-yellow-700 dark:text-yellow-200/90 font-black text-base">
+                            {coin.priceHistory?.[coin.priceHistory.length - 1]?.price?.toFixed(4) ?? '—'}
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <span className="text-[11px] text-yellow-600/70 dark:text-yellow-500/60 uppercase tracking-wider font-semibold">Holders</span>
+                        <span className="text-yellow-700 dark:text-yellow-200/90 font-black text-base">{coin.traderCount ?? 0}</span>
+                    </div>
+                </div>
                 <p className="text-gray-700 dark:text-gray-300 max-w-2xl">{coin.description}</p>
                 
                 <div className="mt-4 w-full">

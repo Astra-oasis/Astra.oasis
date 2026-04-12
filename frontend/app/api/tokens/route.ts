@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
                 t.*,
                 COALESCE(bp.max_reserve, 0) AS max_reserve,
                 COALESCE(NULLIF(t.volume_24h, 0), pm.volume_24h_calc, 0) AS computed_volume_24h,
-                COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count
+                COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count,
+                lt.last_trade_type
             FROM tokens t
             LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
             LEFT JOIN LATERAL (
@@ -68,6 +69,13 @@ export async function GET(request: NextRequest) {
                   AND p.status = 'completed'
                   AND p.created_at >= NOW() - INTERVAL '24 hours'
             ) pm ON true
+            LEFT JOIN LATERAL (
+                SELECT CASE WHEN buyer_address IS NOT NULL THEN 'buy' ELSE 'sell' END AS last_trade_type
+                FROM purchases
+                WHERE token_id = t.id AND status = 'completed'
+                ORDER BY created_at DESC
+                LIMIT 1
+            ) lt ON true
             ORDER BY t.created_at DESC
         `;
         const params: any[] = [];
@@ -78,7 +86,8 @@ export async function GET(request: NextRequest) {
                     t.*,
                     COALESCE(bp.max_reserve, 0) AS max_reserve,
                     COALESCE(NULLIF(t.volume_24h, 0), pm.volume_24h_calc, 0) AS computed_volume_24h,
-                    COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count
+                    COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count,
+                    lt.last_trade_type
                 FROM tokens t
                 LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
                 LEFT JOIN LATERAL (
@@ -101,6 +110,13 @@ export async function GET(request: NextRequest) {
                       AND p.status = 'completed'
                       AND p.created_at >= NOW() - INTERVAL '24 hours'
                 ) pm ON true
+                LEFT JOIN LATERAL (
+                    SELECT CASE WHEN buyer_address IS NOT NULL THEN 'buy' ELSE 'sell' END AS last_trade_type
+                    FROM purchases
+                    WHERE token_id = t.id AND status = 'completed'
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                ) lt ON true
                 WHERE t.owner = $1
                 ORDER BY t.created_at DESC
             `;
@@ -113,9 +129,6 @@ export async function GET(request: NextRequest) {
             success: true,
             data: result.rows,
         });
-
-        // Cache tokens for 30 seconds to reduce database load
-        response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
 
         return response;
     } catch (error) {
