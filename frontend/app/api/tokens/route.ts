@@ -41,18 +41,66 @@ export async function GET(request: NextRequest) {
         const owner = request.nextUrl.searchParams.get('owner');
 
         let sql = `
-            SELECT t.*, COALESCE(bp.max_reserve, 0) AS max_reserve
+            SELECT
+                t.*,
+                COALESCE(bp.max_reserve, 0) AS max_reserve,
+                COALESCE(NULLIF(t.volume_24h, 0), pm.volume_24h_calc, 0) AS computed_volume_24h,
+                COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count
             FROM tokens t
             LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    COALESCE(
+                        SUM(
+                            COALESCE(
+                                quantity,
+                                CASE
+                                    WHEN price_per_token IS NULL OR price_per_token = 0 THEN 0
+                                    ELSE total_price / price_per_token
+                                END
+                            )
+                        ),
+                        0
+                    ) AS volume_24h_calc,
+                    COALESCE(COUNT(DISTINCT buyer_address) + COUNT(DISTINCT seller_address), 0) AS trader_count_calc
+                FROM purchases p
+                WHERE p.token_id = t.id
+                  AND p.status = 'completed'
+                  AND p.created_at >= NOW() - INTERVAL '24 hours'
+            ) pm ON true
             ORDER BY t.created_at DESC
         `;
         const params: any[] = [];
 
         if (owner) {
             sql = `
-                SELECT t.*, COALESCE(bp.max_reserve, 0) AS max_reserve
+                SELECT
+                    t.*,
+                    COALESCE(bp.max_reserve, 0) AS max_reserve,
+                    COALESCE(NULLIF(t.volume_24h, 0), pm.volume_24h_calc, 0) AS computed_volume_24h,
+                    COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count
                 FROM tokens t
                 LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
+                LEFT JOIN LATERAL (
+                    SELECT
+                        COALESCE(
+                            SUM(
+                                COALESCE(
+                                    quantity,
+                                    CASE
+                                        WHEN price_per_token IS NULL OR price_per_token = 0 THEN 0
+                                        ELSE total_price / price_per_token
+                                    END
+                                )
+                            ),
+                            0
+                        ) AS volume_24h_calc,
+                        COALESCE(COUNT(DISTINCT buyer_address) + COUNT(DISTINCT seller_address), 0) AS trader_count_calc
+                    FROM purchases p
+                    WHERE p.token_id = t.id
+                      AND p.status = 'completed'
+                      AND p.created_at >= NOW() - INTERVAL '24 hours'
+                ) pm ON true
                 WHERE t.owner = $1
                 ORDER BY t.created_at DESC
             `;
