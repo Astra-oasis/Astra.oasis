@@ -50,6 +50,11 @@ jobs:
           token: ${{ secrets.INFRA_REPO_TOKEN }}
           path: infra-platform
 
+      - name: Create .env file
+        run: |
+          mkdir -p infra-platform/services/astra-oasis
+          echo "${{ secrets.ENV_FILE }}" > infra-platform/services/astra-oasis/.env
+
       - name: Run deploy playbook
         env:
           GITLAB_USER: ${{ secrets.GITLAB_REGISTRY_USER }}
