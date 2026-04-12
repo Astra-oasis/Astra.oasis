@@ -5,7 +5,7 @@ on:
     branches: [main, phong]
 
 env:
-  IMAGE_FRONTEND: registry.gitlab.com/astra.oasis/astra.oasis/frontend
+  IMAGE_FRONTEND: registry.gitlab.com/astra.oasis/astra-oasis/frontend
 
 jobs:
   build-and-push:
