@@ -203,15 +203,26 @@ export default function Home() {
               .map((candle) => Number(candle.close))
               .filter((close) => Number.isFinite(close) && close > 0);
 
-            return [String(coin.id), buildSparkPathFromValues(sparkCloses)] as const;
+            const path = sparkCloses.length >= 2
+              ? buildSparkPathFromValues(sparkCloses)
+              : 'M0 20 L132 20'; // flat line nếu chưa có trade
+            const dir = sparkCloses.length >= 2 && sparkCloses[sparkCloses.length - 1] >= sparkCloses[0] ? 'up' : 'down';
+
+            return [
+              [String(coin.id), path],
+              [String(coin.id) + '_dir', dir],
+            ] as const;
           } catch {
-            return [String(coin.id), ''] as const;
+            return [
+              [String(coin.id), 'M0 20 L132 20'],
+              [String(coin.id) + '_dir', 'up'],
+            ] as const;
           }
         })
       );
 
       if (!cancelled) {
-        setTableSparkPaths(Object.fromEntries(entries));
+        setTableSparkPaths(Object.fromEntries(entries.flat()));
       }
     };
 
@@ -344,20 +355,32 @@ export default function Home() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              {sparkPath ? (
-                                <svg viewBox="0 0 132 40" className="h-8 w-[132px]">
-                                  <path
-                                    d={sparkPath}
-                                    fill="none"
-                                    stroke="#86efac"
-                                    strokeWidth="2"
-                                    strokeLinejoin="round"
-                                    strokeLinecap="round"
-                                  />
-                                </svg>
-                              ) : (
-                                <div className="h-8 w-[132px] rounded bg-gray-200/60 dark:bg-[#1a2231]" />
-                              )}
+                              {(() => {
+                                const path = tableSparkPaths[String(coin.id)];
+                                if (!path) return <div className="h-10 w-[132px] rounded bg-gray-200/60 dark:bg-[#1a2231]" />;
+                                const sparkColor = tableSparkPaths[String(coin.id) + '_dir'] === 'down' ? '#ef5350' : '#26a69a';
+                                const gradId = `sg-${coin.id}`;
+                                const fillPath = path + ' L132 40 L0 40 Z';
+                                return (
+                                  <svg viewBox="0 0 132 40" className="h-10 w-[132px]">
+                                    <defs>
+                                      <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor={sparkColor} stopOpacity="0.35" />
+                                        <stop offset="100%" stopColor={sparkColor} stopOpacity="0.02" />
+                                      </linearGradient>
+                                    </defs>
+                                    <path d={fillPath} fill={`url(#${gradId})`} />
+                                    <path
+                                      d={path}
+                                      fill="none"
+                                      stroke={sparkColor}
+                                      strokeWidth="1.5"
+                                      strokeLinejoin="round"
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                                );
+                              })()}
                             </td>
                             <td className="px-4 py-3 font-semibold text-emerald-500">{formatMarketCap(coin.marketCap)}</td>
                             <td className="px-4 py-3">

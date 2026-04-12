@@ -480,6 +480,17 @@ export default function TokenLightweightChart({
     const symbol = `${ticker.toUpperCase()}/TEST`;
     const isPositive = priceChange >= 0;
 
+    // Vol 24h — tổng volume 24h gần nhất từ candles gốc (không phải live)
+    const vol24h = (() => {
+        const cutoff = Math.floor(Date.now() / 1000) - 86400;
+        const total = candles.reduce((sum, c) => {
+            return Number(c.time) >= cutoff ? sum + (c.volume ?? 0) : sum;
+        }, 0);
+        if (total >= 1_000_000) return `${(total / 1_000_000).toFixed(2)}M`;
+        if (total >= 1_000) return `${(total / 1_000).toFixed(2)}K`;
+        return total.toFixed(2);
+    })();
+
     return (
         <div style={{
             background: themeColors.background,
@@ -524,6 +535,13 @@ export default function TokenLightweightChart({
                             {isPositive ? '+' : ''}{priceChange.toFixed(2)}%
                         </span>
                     )}
+                    <span style={{
+                        color: themeColors.textColor,
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                    }}>
+                        Vol 24h: {vol24h}
+                    </span>
                 </div>
 
                 {/* Interval buttons */}

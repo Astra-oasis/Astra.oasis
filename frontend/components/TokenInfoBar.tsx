@@ -46,8 +46,8 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
     };
 
     const formatVolume = (volume: number) => {
-        if (volume >= 1000000) return `${(volume / 1000000).toFixed(1)}M`;
-        if (volume >= 1000) return `${(volume / 1000).toFixed(1)}K`;
+        if (volume >= 1000000) return `${(volume / 1000000).toFixed(2)}M`;
+        if (volume >= 1000) return `${(volume / 1000).toFixed(2)}K`;
         return volume.toFixed(2);
     };
 
