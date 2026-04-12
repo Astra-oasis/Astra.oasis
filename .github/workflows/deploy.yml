@@ -29,7 +29,8 @@ jobs:
             ${{ env.IMAGE_FRONTEND }}:latest
             ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
 
-  deploy:
+
+deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
@@ -43,15 +44,17 @@ jobs:
       - name: Install Ansible
         run: pip install ansible
 
-      - uses: actions/checkout@v4
+      - name: Checkout infra-platform
+        uses: actions/checkout@v4
         with:
           repository: astra-oasis/infra-platform
           token: ${{ secrets.INFRA_REPO_TOKEN }}
+          path: infra-platform
 
       - name: Run deploy playbook
         env:
           GITLAB_USER: ${{ secrets.GITLAB_REGISTRY_USER }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_REGISTRY_TOKEN }}
         run: |
-          ansible-playbook ansible/playbooks/deploy.yml \
-            -i ansible/inventory/hosts.yml
+          ansible-playbook infra-platform/ansible/playbooks/deploy.yml \
+            -i infra-platform/ansible/inventory/hosts.yml
