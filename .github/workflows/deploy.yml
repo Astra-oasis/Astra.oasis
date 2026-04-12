@@ -36,9 +36,9 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/action_oasis
+          chmod 600 ~/.ssh/action_oasis
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
       - name: Install Ansible
         run: pip install ansible
@@ -54,6 +54,8 @@ jobs:
         env:
           GITLAB_USER: ${{ secrets.GITLAB_REGISTRY_USER }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_REGISTRY_TOKEN }}
+          ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           ansible-playbook infra-platform/ansible/playbooks/deploy.yml \
-            -i infra-platform/ansible/inventory/hosts.yml
+            -i infra-platform/ansible/inventory/hosts.yml \
+            --private-key ~/.ssh/action_oasis
