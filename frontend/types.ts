@@ -13,6 +13,11 @@ export interface Coin {
   priceHistory: { time: string; price: number }[];
   tokenAddress?: string; // Added for real contract interaction
   contractAddress?: string; // Smart contract address
+  volume24h?: number;
+  priceChange5m?: number;
+  priceChange1h?: number;
+  priceChange6h?: number;
+  traderCount?: number;
 }
 
 export interface Comment {

@@ -279,6 +279,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
             tokenId={coin.id}
             ticker={coin.ticker}
             currentPrice={currentPrice}
+            createdAt={coin.createdAt}
             refreshKey={chartRefreshKey}
           />
 
