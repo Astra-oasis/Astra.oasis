@@ -22,6 +22,7 @@ export interface Comment {
   timestamp: string;
   type: 'buy' | 'sell' | 'chat';
   amount?: number;
+  avatarUrl?: string;
 }
 
 export enum ViewState {
