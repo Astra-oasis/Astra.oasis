@@ -11,6 +11,7 @@ import { TOKEN_ABI } from '../abi/factoryAbi';
 
 const CREATOR_FEE_RATE = 0.003; // 0.300%
 const PROTOCOL_FEE_RATE = 0.008; // 0.800%
+const WATCH_ASSET_KEY_PREFIX = 'watch-asset-prompted';
 
 interface TradeFormProps {
   coin: Coin;
@@ -44,6 +45,10 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
     }
     const wrappedProvider = wrapEthereumProvider(ethereum);
     return new BrowserProvider(wrappedProvider);
+  };
+
+  const getWatchAssetKey = (walletAddress: string, tokenAddress: string) => {
+    return `${WATCH_ASSET_KEY_PREFIX}:${walletAddress.toLowerCase()}:${tokenAddress.toLowerCase()}`;
   };
 
   const loadBalances = async () => {
@@ -287,21 +292,39 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       setAmount('');
       loadBalances();
 
-      // Auto-add token to MetaMask after buy
+      // Auto-add token to MetaMask only once per wallet+token pair (first successful buy)
       if (mode === 'buy' && coin.tokenAddress) {
         try {
-          await window.ethereum.request({
-            method: 'wallet_watchAsset',
-            params: {
-              type: 'ERC20',
-              options: {
-                address: coin.tokenAddress,
-                symbol: coin.ticker.slice(0, 11),
-                decimals: 18,
-                image: coin.imageUrl || '',
-              },
-            },
-          });
+          let signerAddress = userAddress;
+          if (!signerAddress && window.ethereum) {
+            const provider = await getProvider();
+            const signer = await provider.getSigner();
+            signerAddress = await signer.getAddress();
+          }
+
+          if (signerAddress) {
+            const storageKey = getWatchAssetKey(signerAddress, coin.tokenAddress);
+            const hasPrompted = localStorage.getItem(storageKey) === '1';
+
+            if (!hasPrompted) {
+              const wasAdded = await window.ethereum.request({
+                method: 'wallet_watchAsset',
+                params: {
+                  type: 'ERC20',
+                  options: {
+                    address: coin.tokenAddress,
+                    symbol: coin.ticker.slice(0, 11),
+                    decimals: 18,
+                    image: coin.imageUrl || '',
+                  },
+                },
+              });
+
+              if (wasAdded) {
+                localStorage.setItem(storageKey, '1');
+              }
+            }
+          }
         } catch { /* user dismissed, silent */ }
       }
 

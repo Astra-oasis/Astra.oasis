@@ -73,7 +73,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ trades }) => {
               <tr>
                 <th className="w-[22%] px-3 py-3 text-left">Account</th>
                 <th className="w-[10%] px-3 py-3 text-left">Type</th>
-                <th className="w-[15%] px-3 py-3 text-right">Price</th>
+                <th className="w-[15%] px-3 py-3 text-left">Price</th>
                 <th className="w-[23%] px-3 py-3 text-left">Fees</th>
                 <th className="w-[20%] px-3 py-3 text-left">Date (UTC+7)</th>
                 <th className="w-[10%] px-3 py-3 text-left">Tx Hash</th>
@@ -102,13 +102,11 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ trades }) => {
                       {trade.type === 'buy' ? 'BUY' : 'SELL'}
                     </span>
                   </td>
-                  <td className="w-[15%] px-3 py-3 text-gray-700 dark:text-gray-400 font-mono text-xs text-right">
-                    TEST {trade.price.toFixed(6)}
+                  <td className="w-[15%] px-3 py-3 text-gray-700 dark:text-gray-400 font-mono text-xs text-left tabular-nums">
+                    {trade.price.toFixed(6)} TEST
                   </td>
-                  <td className="w-[23%] px-3 py-3 text-[11px] font-mono text-gray-700 dark:text-gray-400 leading-5">
-                    <div>Creator: {(trade.creatorFee || 0).toFixed(6)} TEST</div>
-                    <div>Protocol: {(trade.protocolFee || 0).toFixed(6)} TEST</div>
-                    <div className="text-gray-500 dark:text-gray-500">Total: {(trade.totalFee || 0).toFixed(6)} TEST</div>
+                  <td className="w-[23%] px-3 py-3 text-xs font-mono text-gray-700 dark:text-gray-400">
+                    {(trade.totalFee || 0).toFixed(6)} TEST
                   </td>
                   <td className="w-[20%] px-3 py-3 text-gray-700 dark:text-gray-500 text-xs font-mono">
                     {formatTradeTime(trade.timestamp)}

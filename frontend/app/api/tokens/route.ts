@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
                 t.*,
                 COALESCE(bp.max_reserve, 0) AS max_reserve,
                 COALESCE(NULLIF(t.volume_24h, 0), pm.volume_24h_calc, 0) AS computed_volume_24h,
-                COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count,
+                COALESCE(pm.trader_count_calc, t.trader_count, 0) AS computed_trader_count,
                 lt.last_trade_type
             FROM tokens t
             LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
@@ -63,7 +63,31 @@ export async function GET(request: NextRequest) {
                         ),
                         0
                     ) AS volume_24h_calc,
-                    COALESCE(COUNT(DISTINCT buyer_address) + COUNT(DISTINCT seller_address), 0) AS trader_count_calc
+                                        COALESCE((
+                                                SELECT COUNT(*)
+                                                FROM (
+                                                        SELECT address
+                                                        FROM (
+                                                                SELECT buyer_address AS address, SUM(quantity::numeric) AS net_qty
+                                                                FROM purchases
+                                                                WHERE token_id = t.id
+                                                                    AND buyer_address IS NOT NULL
+                                                                    AND status = 'completed'
+                                                                GROUP BY buyer_address
+
+                                                                UNION ALL
+
+                                                                SELECT seller_address AS address, -SUM(quantity::numeric) AS net_qty
+                                                                FROM purchases
+                                                                WHERE token_id = t.id
+                                                                    AND seller_address IS NOT NULL
+                                                                    AND status = 'completed'
+                                                                GROUP BY seller_address
+                                                        ) net_moves
+                                                        GROUP BY address
+                                                        HAVING SUM(net_qty) > 0
+                                                ) holder_wallets
+                                        ), 0) AS trader_count_calc
                 FROM purchases p
                 WHERE p.token_id = t.id
                   AND p.status = 'completed'
@@ -86,7 +110,7 @@ export async function GET(request: NextRequest) {
                     t.*,
                     COALESCE(bp.max_reserve, 0) AS max_reserve,
                     COALESCE(NULLIF(t.volume_24h, 0), pm.volume_24h_calc, 0) AS computed_volume_24h,
-                    COALESCE(NULLIF(t.trader_count, 0), pm.trader_count_calc, 0) AS computed_trader_count,
+                    COALESCE(pm.trader_count_calc, t.trader_count, 0) AS computed_trader_count,
                     lt.last_trade_type
                 FROM tokens t
                 LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
@@ -104,7 +128,31 @@ export async function GET(request: NextRequest) {
                             ),
                             0
                         ) AS volume_24h_calc,
-                        COALESCE(COUNT(DISTINCT buyer_address) + COUNT(DISTINCT seller_address), 0) AS trader_count_calc
+                                                COALESCE((
+                                                        SELECT COUNT(*)
+                                                        FROM (
+                                                                SELECT address
+                                                                FROM (
+                                                                        SELECT buyer_address AS address, SUM(quantity::numeric) AS net_qty
+                                                                        FROM purchases
+                                                                        WHERE token_id = t.id
+                                                                            AND buyer_address IS NOT NULL
+                                                                            AND status = 'completed'
+                                                                        GROUP BY buyer_address
+
+                                                                        UNION ALL
+
+                                                                        SELECT seller_address AS address, -SUM(quantity::numeric) AS net_qty
+                                                                        FROM purchases
+                                                                        WHERE token_id = t.id
+                                                                            AND seller_address IS NOT NULL
+                                                                            AND status = 'completed'
+                                                                        GROUP BY seller_address
+                                                                ) net_moves
+                                                                GROUP BY address
+                                                                HAVING SUM(net_qty) > 0
+                                                        ) holder_wallets
+                                                ), 0) AS trader_count_calc
                     FROM purchases p
                     WHERE p.token_id = t.id
                       AND p.status = 'completed'

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
                 t.marketcap,
                 t.volume_24h,
                 t.price_snapshot_value,
-                t.trader_count,
+                COALESCE(hs.holder_count, t.trader_count, 0) AS trader_count,
                 t.created_at,
                 COALESCE(bp.max_reserve, 0) AS max_reserve,
                 COALESCE(stats.buy_count, 0)     AS buy_count,
@@ -34,6 +34,31 @@ export async function GET(request: NextRequest) {
                 ) AS trend_score
              FROM tokens t
              LEFT JOIN token_bonding_progress bp ON bp.token_id = t.id
+                         LEFT JOIN LATERAL (
+                                 SELECT COUNT(*) AS holder_count
+                                 FROM (
+                                         SELECT address
+                                         FROM (
+                                                 SELECT buyer_address AS address, SUM(quantity::numeric) AS net_qty
+                                                 FROM purchases
+                                                 WHERE token_id = t.id
+                                                     AND buyer_address IS NOT NULL
+                                                     AND status = 'completed'
+                                                 GROUP BY buyer_address
+
+                                                 UNION ALL
+
+                                                 SELECT seller_address AS address, -SUM(quantity::numeric) AS net_qty
+                                                 FROM purchases
+                                                 WHERE token_id = t.id
+                                                     AND seller_address IS NOT NULL
+                                                     AND status = 'completed'
+                                                 GROUP BY seller_address
+                                         ) net_moves
+                                         GROUP BY address
+                                         HAVING SUM(net_qty) > 0
+                                 ) holder_wallets
+                         ) hs ON true
              LEFT JOIN LATERAL (
                  SELECT
                      COUNT(*) FILTER (WHERE buyer_address IS NOT NULL) AS buy_count,
