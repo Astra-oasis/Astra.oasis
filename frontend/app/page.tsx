@@ -134,6 +134,7 @@ export default function Home() {
             imageUrl: token.image_url || `https://picsum.photos/200/200?random=${idx + 500}`,
             creator: token.owner,
             marketCap: parseFloat(token.marketcap) || 0,
+            maxReserve,
             volume24h: parseFloat(token.computed_volume_24h ?? token.volume_24h) || 0,
             priceChange5m: token.price_change_5m !== undefined && token.price_change_5m !== null ? parseFloat(token.price_change_5m) : null,
             priceChange1h: token.price_change_1h !== undefined && token.price_change_1h !== null ? parseFloat(token.price_change_1h) : null,

@@ -6,6 +6,7 @@ export interface Coin {
   imageUrl: string;
   creator: string;
   marketCap: number;
+  maxReserve?: number;
   replies: number;
   bondingCurveProgress: number; // 0 to 100
   createdAt: number;

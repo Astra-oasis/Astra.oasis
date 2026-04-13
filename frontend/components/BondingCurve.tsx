@@ -10,7 +10,7 @@ const BondingCurve: React.FC<BondingCurveProps> = ({ progress, showLabel = false
     <div className="w-full">
       {showLabel && (
         <div className="flex justify-between items-center mb-1 text-xs font-bold text-gray-600 dark:text-gray-500 uppercase tracking-widest">
-          <span>Bonding Curve</span>
+          <span>BONDING CURVE</span>
           <span className="text-pump-green">{progress}%</span>
         </div>
       )}

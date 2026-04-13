@@ -28,7 +28,7 @@ const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
     );
   }
 
-  const amountInCurve = (42000 * (coin.bondingCurveProgress / 100)).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const amountInCurve = (coin.maxReserve ?? ((coin.bondingCurveProgress / 100) * 10000)).toFixed(4);
 
   return (
     <div className="mb-8 w-full animate-fade-in">
@@ -79,7 +79,7 @@ const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
                 
                 <div className="mt-4 w-full">
                    <div className="flex justify-between text-sm text-yellow-600 dark:text-yellow-400 mb-1 font-bold">
-                        <span className="uppercase">Bonding Curve Progress</span>
+                        <span className="uppercase">BONDING CURVE PROGRESS</span>
                         <span>{coin.bondingCurveProgress.toFixed(4)}%</span>
                    </div>
                    <div className="relative h-4 bg-gray-300 dark:bg-gray-800 rounded-full overflow-hidden border border-yellow-400 dark:border-yellow-400/30 mb-2">
@@ -90,7 +90,7 @@ const KingOfTheHill: React.FC<KingOfTheHillProps> = ({ coin, onClick }) => {
                         />
                    </div>
                    <p className="text-xs text-yellow-700 dark:text-yellow-500/70 font-medium">
-                        There are {amountInCurve} TEST in the bonding curve
+                        There are {amountInCurve} TEST in the BONDING CURVE
                    </p>
                 </div>
             </div>
