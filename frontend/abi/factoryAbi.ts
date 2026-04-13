@@ -37,4 +37,4 @@ export const TOKEN_ABI = [
   "event TokenSold(address indexed seller, uint256 totalPrice, uint256 newPrice)"
 ] as const;
 
-export const FACTORY_ADDRESS = "0x6cB2b6c1cf00B2f54f75f345A021669D78952Ee3";
+export const FACTORY_ADDRESS = "0xcd5352dFdDad49224518F1F51aa63112243298F4";

@@ -71,11 +71,12 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ trades }) => {
           <table className="w-full text-sm text-left table-fixed">
             <thead className="text-xs text-gray-600 dark:text-gray-500 uppercase bg-gray-100 dark:bg-gray-900/50 sticky top-0 z-10">
               <tr>
-                <th className="w-[28%] px-3 py-3 text-left">Account</th>
-                <th className="w-[12%] px-3 py-3 text-left">Type</th>
-                <th className="w-[20%] px-3 py-3 text-right">Price</th>
-                <th className="w-[25%] px-3 py-3 text-left">Date (UTC+7)</th>
-                <th className="w-[15%] px-3 py-3 text-left">Tx Hash</th>
+                <th className="w-[22%] px-3 py-3 text-left">Account</th>
+                <th className="w-[10%] px-3 py-3 text-left">Type</th>
+                <th className="w-[15%] px-3 py-3 text-right">Price</th>
+                <th className="w-[23%] px-3 py-3 text-left">Fees</th>
+                <th className="w-[20%] px-3 py-3 text-left">Date (UTC+7)</th>
+                <th className="w-[10%] px-3 py-3 text-left">Tx Hash</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-300/50 dark:divide-gray-800/50">
@@ -87,10 +88,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ trades }) => {
                         ${idx === 0 ? 'animate-slide-in-fade bg-pump-accent/5' : ''}
                       `}
                 >
-                  <td className="w-[28%] px-3 py-3 text-gray-700 dark:text-gray-400 font-mono text-xs truncate">
+                  <td className="w-[22%] px-3 py-3 text-gray-700 dark:text-gray-400 font-mono text-xs truncate">
                     {trade.user.slice(0, 6)}...{trade.user.slice(-4)}
                   </td>
-                  <td className="w-[12%] px-3 py-3">
+                  <td className="w-[10%] px-3 py-3">
                     <span className={`
                               inline-block px-2 py-1 rounded text-xs font-bold min-w-[45px] text-center
                               ${trade.type === 'buy'
@@ -101,13 +102,18 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ trades }) => {
                       {trade.type === 'buy' ? 'BUY' : 'SELL'}
                     </span>
                   </td>
-                  <td className="w-[20%] px-3 py-3 text-gray-700 dark:text-gray-400 font-mono text-xs text-right">
+                  <td className="w-[15%] px-3 py-3 text-gray-700 dark:text-gray-400 font-mono text-xs text-right">
                     TEST {trade.price.toFixed(6)}
                   </td>
-                  <td className="w-[25%] px-3 py-3 text-gray-700 dark:text-gray-500 text-xs font-mono">
+                  <td className="w-[23%] px-3 py-3 text-[11px] font-mono text-gray-700 dark:text-gray-400 leading-5">
+                    <div>Creator: {(trade.creatorFee || 0).toFixed(6)} TEST</div>
+                    <div>Protocol: {(trade.protocolFee || 0).toFixed(6)} TEST</div>
+                    <div className="text-gray-500 dark:text-gray-500">Total: {(trade.totalFee || 0).toFixed(6)} TEST</div>
+                  </td>
+                  <td className="w-[20%] px-3 py-3 text-gray-700 dark:text-gray-500 text-xs font-mono">
                     {formatTradeTime(trade.timestamp)}
                   </td>
-                  <td className="w-[15%] px-3 py-3 text-gray-700 dark:text-gray-400 text-xs font-mono">
+                  <td className="w-[10%] px-3 py-3 text-gray-700 dark:text-gray-400 text-xs font-mono">
                     {trade.txHash ? (
                       <a
                         href={`${OASIS_TX_EXPLORER_URL}/${trade.txHash}`}

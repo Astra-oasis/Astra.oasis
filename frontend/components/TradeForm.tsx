@@ -9,6 +9,9 @@ import { BrowserProvider, Contract, formatEther, parseEther } from 'ethers';
 import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
 import { TOKEN_ABI } from '../abi/factoryAbi';
 
+const CREATOR_FEE_RATE = 0.003; // 0.300%
+const PROTOCOL_FEE_RATE = 0.008; // 0.800%
+
 interface TradeFormProps {
   coin: Coin;
   showToast: (type: ToastMessage['type'], title: string, message: string) => void;
@@ -28,7 +31,10 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
   const [userAddress, setUserAddress] = useState('');
   const [currentPrice, setCurrentPrice] = useState('0');
   const [priceImpact, setPriceImpact] = useState('0');
-  const [oasisFee, setOasisFee] = useState('0');
+  const [creatorFee, setCreatorFee] = useState('0');
+  const [protocolFee, setProtocolFee] = useState('0');
+  const [totalFee, setTotalFee] = useState('0');
+  const [baseAmount, setBaseAmount] = useState('0');
   const [processingToastId, setProcessingToastId] = useState<string | null>(null);
 
   const getProvider = async () => {
@@ -75,7 +81,10 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
     if (!amount || parseFloat(amount) <= 0 || !coin.tokenAddress) {
       setEstimatedCost('0');
       setPriceImpact('0');
-      setOasisFee('0');
+      setCreatorFee('0');
+      setProtocolFee('0');
+      setTotalFee('0');
+      setBaseAmount('0');
       return;
     }
 
@@ -87,35 +96,52 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       if (mode === 'buy') {
         const cost = await tokenContract.getBuyPrice(amountWei);
         const costEth = parseFloat(formatEther(cost));
-        setEstimatedCost(costEth.toString());
+        setBaseAmount(costEth.toString());
+
+        const creatorFeeValue = costEth * CREATOR_FEE_RATE;
+        const protocolFeeValue = costEth * PROTOCOL_FEE_RATE;
+        const totalFeeValue = creatorFeeValue + protocolFeeValue;
+        const totalCost = costEth + totalFeeValue;
+
+        setCreatorFee(creatorFeeValue.toString());
+        setProtocolFee(protocolFeeValue.toString());
+        setTotalFee(totalFeeValue.toString());
+        setEstimatedCost(totalCost.toString());
 
         // Calculate price impact
         const expectedCost = parseFloat(currentPrice) * parseFloat(amount);
         const impact = expectedCost > 0 ? ((costEth - expectedCost) / expectedCost) * 100 : 0;
         setPriceImpact(impact.toFixed(2));
 
-        // Calculate Oasis fee (typically 0.1% of cost)
-        const fee = costEth * 0.001;
-        setOasisFee(fee.toFixed(6));
       } else {
         const returnAmount = await tokenContract.getSellPrice(amountWei);
         const returnEth = parseFloat(formatEther(returnAmount));
-        setEstimatedCost(returnEth.toString());
+        setBaseAmount(returnEth.toString());
+
+        const creatorFeeValue = returnEth * CREATOR_FEE_RATE;
+        const protocolFeeValue = returnEth * PROTOCOL_FEE_RATE;
+        const totalFeeValue = creatorFeeValue + protocolFeeValue;
+        const netReceive = Math.max(0, returnEth - totalFeeValue);
+
+        setCreatorFee(creatorFeeValue.toString());
+        setProtocolFee(protocolFeeValue.toString());
+        setTotalFee(totalFeeValue.toString());
+        setEstimatedCost(netReceive.toString());
 
         // Calculate price impact for sell
         const expectedReturn = parseFloat(currentPrice) * parseFloat(amount);
         const impact = expectedReturn > 0 ? ((returnEth - expectedReturn) / expectedReturn) * 100 : 0;
         setPriceImpact(impact.toFixed(2));
 
-        // Calculate Oasis fee
-        const fee = returnEth * 0.001;
-        setOasisFee(fee.toFixed(6));
       }
     } catch (error) {
       console.error('Error calculating cost:', error);
       setEstimatedCost('0');
       setPriceImpact('0');
-      setOasisFee('0');
+      setCreatorFee('0');
+      setProtocolFee('0');
+      setTotalFee('0');
+      setBaseAmount('0');
     }
   };
 
@@ -235,7 +261,14 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
 
       if (mode === 'buy') {
         const cost = await tokenContract.getBuyPrice(amountWei);
-        tx = await tokenContract.buyTokens(amountWei, { value: cost });
+        const costEth = parseFloat(formatEther(cost));
+        const tradeCreatorFee = costEth * CREATOR_FEE_RATE;
+        const tradeProtocolFee = costEth * PROTOCOL_FEE_RATE;
+        const totalCost = costEth + tradeCreatorFee + tradeProtocolFee;
+
+        tx = await tokenContract.buyTokens(amountWei, {
+          value: parseEther(totalCost.toFixed(18)),
+        });
         returnAmount = formatEther(cost);
       } else {
         const sellReturn = await tokenContract.getSellPrice(amountWei);
@@ -379,14 +412,6 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
 
           {/* Summary Details */}
           <div className="space-y-2 p-3 bg-gray-100 dark:bg-gray-900/50 rounded-lg text-xs border border-gray-300 dark:border-gray-800/50">
-            {amount && parseFloat(amount) > 0 && parseFloat(estimatedCost) > 0 && (
-              <div className={`flex justify-between items-center font-bold text-sm mb-2 pb-2 border-b ${mode === 'buy' ? 'border-pump-green/20' : 'border-pump-red/20'}`}>
-                <span className="text-gray-900 dark:text-white">{mode === 'buy' ? 'Total Cost:' : 'You Receive:'}</span>
-                <span className={`font-mono ${mode === 'buy' ? 'text-pump-green' : 'text-pump-red'}`}>
-                  {parseFloat(estimatedCost).toFixed(6)} TEST
-                </span>
-              </div>
-            )}
             <div className="flex justify-between items-center text-gray-700 dark:text-gray-500">
               <span>Price Impact</span>
               <span className={`font-mono ${parseFloat(priceImpact) >= 0 ? 'text-pump-green' : 'text-pump-red'}`}>
@@ -394,9 +419,25 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
               </span>
             </div>
             <div className="flex justify-between items-center text-gray-700 dark:text-gray-500">
-              <span>Oasis Fee</span>
-              <span className="font-mono text-gray-600 dark:text-gray-400">{parseFloat(oasisFee).toFixed(6)} TEST</span>
+              <span>Base Trade Value</span>
+              <span className="font-mono text-gray-600 dark:text-gray-400">{parseFloat(baseAmount).toFixed(6)} TEST</span>
             </div>
+            <div className="flex justify-between items-center text-gray-700 dark:text-gray-500">
+              <span>Creator Fee (0.300%)</span>
+              <span className="font-mono text-gray-600 dark:text-gray-400">{parseFloat(creatorFee).toFixed(6)} TEST</span>
+            </div>
+            <div className="flex justify-between items-center text-gray-700 dark:text-gray-500">
+              <span>Protocol Fee (0.800%)</span>
+              <span className="font-mono text-gray-600 dark:text-gray-400">{parseFloat(protocolFee).toFixed(6)} TEST</span>
+            </div>
+            {amount && parseFloat(amount) > 0 && parseFloat(estimatedCost) > 0 && (
+              <div className={`flex justify-between items-center font-bold text-sm mt-2 pt-2 border-t ${mode === 'buy' ? 'border-pump-green/20' : 'border-pump-red/20'}`}>
+                <span className="text-gray-900 dark:text-white">{mode === 'buy' ? 'Total Cost:' : 'You Receive:'}</span>
+                <span className={`font-mono ${mode === 'buy' ? 'text-pump-green' : 'text-pump-red'}`}>
+                  {parseFloat(estimatedCost).toFixed(6)} TEST
+                </span>
+              </div>
+            )}
           </div>
 
           <button

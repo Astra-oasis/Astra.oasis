@@ -17,6 +17,8 @@ import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
 import { TOKEN_ABI } from '../abi/factoryAbi';
 
 const BONDING_TARGET = 10000; // TEST
+const CREATOR_FEE_RATE = 0.003;
+const PROTOCOL_FEE_RATE = 0.008;
 
 interface CoinDetailProps {
   coin: Coin;
@@ -113,6 +115,10 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
           type: p.trade_type === 'sell' ? 'sell' : 'buy',
           amount: null,
           price: parseFloat(p.price_per_token) || 0,
+          totalPrice: parseFloat(p.total_price) || 0,
+          creatorFee: (parseFloat(p.total_price) || 0) * CREATOR_FEE_RATE,
+          protocolFee: (parseFloat(p.total_price) || 0) * PROTOCOL_FEE_RATE,
+          totalFee: (parseFloat(p.total_price) || 0) * (CREATOR_FEE_RATE + PROTOCOL_FEE_RATE),
           timestamp: p.created_at,
           user: p.buyer_address || p.seller_address || '0x...',
           txHash: p.transaction_hash || null,

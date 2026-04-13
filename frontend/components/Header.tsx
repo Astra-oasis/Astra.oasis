@@ -271,7 +271,7 @@ const Header = forwardRef<HeaderRef, HeaderProps>(({
                 {(!searchResults.tokens || searchResults.tokens.length === 0) &&
                  (!searchResults.wallets || searchResults.wallets.length === 0) && (
                   <div className="px-4 py-8 text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No results found for "{searchQuery}"</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No results found for &quot;{searchQuery}&quot;</p>
                   </div>
                 )}
 

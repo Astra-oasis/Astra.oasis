@@ -44,6 +44,10 @@ export interface Trade {
   type: 'buy' | 'sell';
   amount?: number | null;
   price: number;
+  totalPrice?: number;
+  creatorFee?: number;
+  protocolFee?: number;
+  totalFee?: number;
   timestamp: string;
   user: string;
   txHash?: string | null;

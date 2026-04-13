@@ -2,6 +2,11 @@
 pragma solidity ^0.8.24;
 
 contract TokenPolicyMint {
+    uint256 public constant BASIS_POINTS = 10_000;
+    uint256 public constant CREATOR_FEE_BPS = 30; // 0.300%
+    uint256 public constant PROTOCOL_FEE_BPS = 80; // 0.800%
+    address public constant PLATFORM_WALLET = 0x9000ddD81bCBF2851D2e2f467a0A4984Ac816224;
+
     string public name;
     string public symbol;
     uint8 public decimals = 18;
@@ -21,6 +26,7 @@ contract TokenPolicyMint {
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event TokenPurchased(address indexed buyer, uint256 totalPrice, uint256 newPrice);
     event TokenSold(address indexed seller, uint256 totalPrice, uint256 newPrice);
+    event TradeFeesPaid(address indexed trader, bool isBuy, uint256 creatorFee, uint256 protocolFee);
     
     constructor(
         string memory _name,
@@ -87,6 +93,12 @@ contract TokenPolicyMint {
         uint256 tokensInUnits = supply / 1e18;
         return 5e16 + (tokensInUnits * 1e13);
     }
+
+    function getTradeFees(uint256 amount) public pure returns (uint256 creatorFee, uint256 protocolFee, uint256 totalFee) {
+        creatorFee = (amount * CREATOR_FEE_BPS) / BASIS_POINTS;
+        protocolFee = (amount * PROTOCOL_FEE_BPS) / BASIS_POINTS;
+        totalFee = creatorFee + protocolFee;
+    }
     
     function buyTokens(uint256 amount) external payable {
         require(isForSale, "Token is not for sale");
@@ -94,18 +106,27 @@ contract TokenPolicyMint {
         require(balanceOf[address(this)] >= amount, "Not enough tokens available");
         
         uint256 totalPrice = getBuyPrice(amount);
-        require(msg.value >= totalPrice, "Insufficient payment");
+        (uint256 creatorFee, uint256 protocolFee, uint256 totalFee) = getTradeFees(totalPrice);
+        uint256 totalCost = totalPrice + totalFee;
+        require(msg.value >= totalCost, "Insufficient payment");
         
         balanceOf[address(this)] -= amount;
         balanceOf[msg.sender] += amount;
         soldSupply += amount;
         reserveBalance += totalPrice;
+
+        (bool creatorPaid, ) = payable(creator).call{value: creatorFee}("");
+        require(creatorPaid, "Creator fee transfer failed");
+
+        (bool protocolPaid, ) = payable(PLATFORM_WALLET).call{value: protocolFee}("");
+        require(protocolPaid, "Protocol fee transfer failed");
         
-        if (msg.value > totalPrice) {
-            (bool success, ) = payable(msg.sender).call{value: msg.value - totalPrice}("");
+        if (msg.value > totalCost) {
+            (bool success, ) = payable(msg.sender).call{value: msg.value - totalCost}("");
             require(success, "Refund failed");
         }
         
+        emit TradeFeesPaid(msg.sender, true, creatorFee, protocolFee);
         emit TokenPurchased(msg.sender, totalPrice, getCurrentPrice());
     }
     
@@ -116,6 +137,8 @@ contract TokenPolicyMint {
         require(soldSupply >= amount, "Cannot sell more than sold supply");
         
         uint256 totalPrice = getSellPrice(amount);
+        (uint256 creatorFee, uint256 protocolFee, uint256 totalFee) = getTradeFees(totalPrice);
+        uint256 netPayout = totalPrice - totalFee;
         require(reserveBalance >= totalPrice, "Insufficient reserve balance");
         
         balanceOf[msg.sender] -= amount;
@@ -123,10 +146,17 @@ contract TokenPolicyMint {
         soldSupply -= amount;
         reserveBalance -= totalPrice;
         
-        (bool success, ) = payable(msg.sender).call{value: totalPrice}("");
+        (bool success, ) = payable(msg.sender).call{value: netPayout}("");
         require(success, "Transfer failed");
+
+        (bool creatorPaid, ) = payable(creator).call{value: creatorFee}("");
+        require(creatorPaid, "Creator fee transfer failed");
+
+        (bool protocolPaid, ) = payable(PLATFORM_WALLET).call{value: protocolFee}("");
+        require(protocolPaid, "Protocol fee transfer failed");
         
-        emit TokenSold(msg.sender, totalPrice, getCurrentPrice());
+        emit TradeFeesPaid(msg.sender, false, creatorFee, protocolFee);
+        emit TokenSold(msg.sender, netPayout, getCurrentPrice());
     }
     
     function setSaleStatus(bool _isForSale) external onlyCreator {

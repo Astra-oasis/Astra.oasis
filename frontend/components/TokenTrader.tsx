@@ -5,6 +5,9 @@ import { BrowserProvider, Contract, formatEther, parseEther } from 'ethers'
 import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime'
 import { TOKEN_ABI } from '../abi/factoryAbi'
 
+const CREATOR_FEE_RATE = 0.003
+const PROTOCOL_FEE_RATE = 0.008
+
 interface TokenTraderProps {
   selectedToken: any
   onSuccess?: () => void
@@ -15,6 +18,10 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)
   const [estimatedCost, setEstimatedCost] = useState('0')
+  const [baseAmount, setBaseAmount] = useState('0')
+  const [creatorFee, setCreatorFee] = useState('0')
+  const [protocolFee, setProtocolFee] = useState('0')
+  const [totalFee, setTotalFee] = useState('0')
   const [currentPrice, setCurrentPrice] = useState('0')
   const [bondingProgress, setBondingProgress] = useState(0)
   const [soldSupply, setSoldSupply] = useState('0')
@@ -71,18 +78,45 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
   }
 
   const calculateEstimatedCost = async () => {
-    if (!amount || parseFloat(amount) <= 0) { setEstimatedCost('0'); return }
+    if (!amount || parseFloat(amount) <= 0) {
+      setEstimatedCost('0')
+      setBaseAmount('0')
+      setCreatorFee('0')
+      setProtocolFee('0')
+      setTotalFee('0')
+      return
+    }
     try {
       const provider = await getProvider()
       const tokenContract = new Contract(selectedToken.tokenAddress, TOKEN_ABI, provider)
       const amountBigInt = parseEther(amount)
       if (activeTab === 'buy') {
-        setEstimatedCost(formatEther(await tokenContract.getBuyPrice(amountBigInt)))
+        const base = parseFloat(formatEther(await tokenContract.getBuyPrice(amountBigInt)))
+        const cFee = base * CREATOR_FEE_RATE
+        const pFee = base * PROTOCOL_FEE_RATE
+        const tFee = cFee + pFee
+        setBaseAmount(base.toString())
+        setCreatorFee(cFee.toString())
+        setProtocolFee(pFee.toString())
+        setTotalFee(tFee.toString())
+        setEstimatedCost((base + tFee).toString())
       } else {
-        setEstimatedCost(formatEther(await tokenContract.getSellPrice(amountBigInt)))
+        const gross = parseFloat(formatEther(await tokenContract.getSellPrice(amountBigInt)))
+        const cFee = gross * CREATOR_FEE_RATE
+        const pFee = gross * PROTOCOL_FEE_RATE
+        const tFee = cFee + pFee
+        setBaseAmount(gross.toString())
+        setCreatorFee(cFee.toString())
+        setProtocolFee(pFee.toString())
+        setTotalFee(tFee.toString())
+        setEstimatedCost(Math.max(0, gross - tFee).toString())
       }
     } catch {
       setEstimatedCost('0')
+      setBaseAmount('0')
+      setCreatorFee('0')
+      setProtocolFee('0')
+      setTotalFee('0')
     }
   }
 
@@ -134,7 +168,11 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
       const tokenContract = new Contract(selectedToken.tokenAddress, TOKEN_ABI, signer)
       const amountToBuy = parseEther(amount)
       const totalPrice = await tokenContract.getBuyPrice(amountToBuy)
-      const buyTx = await tokenContract.buyTokens(amountToBuy, { value: totalPrice })
+      const base = parseFloat(formatEther(totalPrice))
+      const cFee = base * CREATOR_FEE_RATE
+      const pFee = base * PROTOCOL_FEE_RATE
+      const totalCost = base + cFee + pFee
+      const buyTx = await tokenContract.buyTokens(amountToBuy, { value: parseEther(totalCost.toFixed(18)) })
       const receipt = await buyTx.wait()
       const pricePerToken = (parseFloat(formatEther(totalPrice)) / parseFloat(amount)).toString()
       await savePurchaseToDatabase('buy', receipt.hash, amount, formatEther(totalPrice), pricePerToken)
@@ -238,8 +276,14 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
               {parseFloat(estimatedCost).toFixed(6)} TEST
             </span>
           </div>
+          <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.45rem', lineHeight: 1.45 }}>
+            Base: {parseFloat(baseAmount).toFixed(6)} TEST | Creator fee (0.300%): {parseFloat(creatorFee).toFixed(6)} TEST
+          </div>
+          <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginTop: '0.15rem', lineHeight: 1.45 }}>
+            Protocol fee (0.800%): {parseFloat(protocolFee).toFixed(6)} TEST | Total fee: {parseFloat(totalFee).toFixed(6)} TEST
+          </div>
           <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
-            Avg: {amount && parseFloat(amount) > 0 ? (parseFloat(estimatedCost) / parseFloat(amount)).toFixed(8) : '0'} TEST/{symbol}
+            Avg: {amount && parseFloat(amount) > 0 ? (parseFloat(baseAmount) / parseFloat(amount)).toFixed(8) : '0'} TEST/{symbol}
           </div>
         </div>
       )}
