@@ -20,7 +20,6 @@ interface TokenForm {
 }
 
 const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreated }) => {
-  const [showMore, setShowMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState('');
@@ -371,29 +370,22 @@ const CreateCoinPage: React.FC<CreateCoinPageProps> = ({ onCancel, onTokenCreate
           </div>
 
           <div className="border-t border-gray-300 dark:border-gray-800 pt-6">
-            <button
-              onClick={() => setShowMore(!showMore)}
-              className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              {showMore ? 'Hide Social Links' : 'Add Social Links (Optional)'}
-            </button>
+            <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-4">Social Links (Optional)</p>
 
-            {showMore && (
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Twitter Link</label>
-                  <input type="text" placeholder="https://x.com/..." className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-2 text-gray-900 dark:text-white text-sm outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Telegram Link</label>
-                  <input type="text" placeholder="https://t.me/..." className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-2 text-gray-900 dark:text-white text-sm outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Website</label>
-                  <input type="text" placeholder="https://..." className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-2 text-gray-900 dark:text-white text-sm outline-none focus:border-blue-500" />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Twitter Link</label>
+                <input type="text" placeholder="https://x.com/..." className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-2 text-gray-900 dark:text-white text-sm outline-none focus:border-blue-500" />
               </div>
-            )}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Telegram Link</label>
+                <input type="text" placeholder="https://t.me/..." className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-2 text-gray-900 dark:text-white text-sm outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-500 mb-1">Website</label>
+                <input type="text" placeholder="https://..." className="w-full rounded bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 p-2 text-gray-900 dark:text-white text-sm outline-none focus:border-blue-500" />
+              </div>
+            </div>
           </div>
 
           <div className="bg-blue-100 dark:bg-blue-900/10 border border-blue-300 dark:border-blue-500/20 rounded-lg p-4 flex gap-3 items-start">

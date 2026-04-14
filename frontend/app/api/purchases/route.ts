@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { calculateAndStoreTokenMetrics } from '@/lib/token-metrics';
 
 export async function POST(request: NextRequest) {
     try {
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
                 status,
                 created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW() + INTERVAL '7 hours')
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
             RETURNING *`,
             [
                 token_id,
@@ -61,6 +62,14 @@ export async function POST(request: NextRequest) {
                 status || 'completed',
             ]
         );
+
+        if ((status || 'completed') === 'completed') {
+            try {
+                await calculateAndStoreTokenMetrics({ tokenId: parseInt(String(token_id), 10) });
+            } catch (metricsError) {
+                console.warn('Purchase saved, but metrics recalculation failed:', metricsError);
+            }
+        }
 
         return NextResponse.json({ success: true, data: result.rows[0] });
     } catch (error) {

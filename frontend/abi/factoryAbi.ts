@@ -23,6 +23,7 @@ export const TOKEN_ABI = [
   "function getCurrentPrice() view returns (uint256)",
   "function getBuyPrice(uint256 amount) view returns (uint256)",
   "function getSellPrice(uint256 amount) view returns (uint256)",
+  "function getTradeFees(uint256 amount) view returns (uint256 creatorFee, uint256 protocolFee, uint256 totalFee)",
   "function isForSale() view returns (bool)",
   "function buyTokens(uint256 amount) payable",
   "function sellTokens(uint256 amount)",
@@ -37,4 +38,4 @@ export const TOKEN_ABI = [
   "event TokenSold(address indexed seller, uint256 totalPrice, uint256 newPrice)"
 ] as const;
 
-export const FACTORY_ADDRESS = "0xdC33D9c286fa789DCC1561A4F3bd85781Bc75760";
+export const FACTORY_ADDRESS = "0xcd5352dFdDad49224518F1F51aa63112243298F4";

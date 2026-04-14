@@ -17,6 +17,7 @@ export interface Coin {
   volume24h?: number;
   priceChange5m?: number;
   priceChange1h?: number;
+  priceChange4h?: number;
   priceChange6h?: number;
   traderCount?: number;
   lastTradeType?: 'buy' | 'sell' | null;

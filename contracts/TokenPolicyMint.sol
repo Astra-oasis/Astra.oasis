@@ -27,6 +27,14 @@ contract TokenPolicyMint {
     event TokenPurchased(address indexed buyer, uint256 totalPrice, uint256 newPrice);
     event TokenSold(address indexed seller, uint256 totalPrice, uint256 newPrice);
     event TradeFeesPaid(address indexed trader, bool isBuy, uint256 creatorFee, uint256 protocolFee);
+
+    function _basePrice() internal pure virtual returns (uint256) {
+        return 5e16;
+    }
+
+    function _priceSlope() internal pure virtual returns (uint256) {
+        return 1e13;
+    }
     
     constructor(
         string memory _name,
@@ -52,9 +60,9 @@ contract TokenPolicyMint {
     }
     
     function getCurrentPrice() public view returns (uint256) {
-        if (soldSupply == 0) return 5e16;
+        if (soldSupply == 0) return _basePrice();
         uint256 tokensInUnits = soldSupply / 1e18;
-        return 5e16 + (tokensInUnits * 1e13);
+        return _basePrice() + (tokensInUnits * _priceSlope());
     }
     
     function getBuyPrice(uint256 amount) public view returns (uint256) {
@@ -62,9 +70,9 @@ contract TokenPolicyMint {
         
         uint256 tokensInUnits = amount / 1e18;
         uint256 currentSoldUnits = soldSupply / 1e18;
-        
-        uint256 startPrice = 5e16 + (currentSoldUnits * 1e13);
-        uint256 endPrice = 5e16 + ((currentSoldUnits + tokensInUnits) * 1e13);
+
+        uint256 startPrice = _basePrice() + (currentSoldUnits * _priceSlope());
+        uint256 endPrice = _basePrice() + ((currentSoldUnits + tokensInUnits) * _priceSlope());
         uint256 avgPrice = (startPrice + endPrice) / 2;
         
         return (avgPrice * amount) / 1e18;
@@ -78,8 +86,8 @@ contract TokenPolicyMint {
         
         if (currentSoldUnits < tokensInUnits) return 0;
         
-        uint256 startPrice = 5e16 + (currentSoldUnits * 1e13);
-        uint256 endPrice = 5e16 + ((currentSoldUnits - tokensInUnits) * 1e13);
+        uint256 startPrice = _basePrice() + (currentSoldUnits * _priceSlope());
+        uint256 endPrice = _basePrice() + ((currentSoldUnits - tokensInUnits) * _priceSlope());
         uint256 avgPrice = (startPrice + endPrice) / 2;
         
         uint256 refund = (avgPrice * amount) / 1e18;
@@ -89,9 +97,9 @@ contract TokenPolicyMint {
     }
     
     function getNewPrice(uint256 supply) internal pure returns (uint256) {
-        if (supply == 0) return 5e16;
+        if (supply == 0) return _basePrice();
         uint256 tokensInUnits = supply / 1e18;
-        return 5e16 + (tokensInUnits * 1e13);
+        return _basePrice() + (tokensInUnits * _priceSlope());
     }
 
     function getTradeFees(uint256 amount) public pure returns (uint256 creatorFee, uint256 protocolFee, uint256 totalFee) {

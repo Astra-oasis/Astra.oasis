@@ -205,8 +205,6 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
           });
         } catch { /* silent */ }
 
-        // Calculate and update metrics after saving purchase
-        await calculateAndUpdateMetrics(tokenData.token_id, pricePerToken);
       } else {
         const errorText = await response.text();
         console.warn('Failed to save purchase to database:', errorText);
@@ -216,21 +214,20 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
     }
   };
 
-  const calculateAndUpdateMetrics = async (tokenId: number, currentPrice?: string) => {
+  const calculateAndUpdateMetrics = async (tokenId: number) => {
     try {
-      // Don't pass current_price - let API fetch from blockchain
       const metricsResponse = await fetch('/api/tokens/calculate-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token_id: tokenId,
-          current_price: currentPrice,
         }),
       });
 
       if (metricsResponse.ok) {
         const metricsData = await metricsResponse.json();
         console.log('Metrics updated:', metricsData.data.metrics);
+        window.dispatchEvent(new CustomEvent('token-metrics-updated'));
       } else {
         console.warn('Failed to update metrics');
       }
@@ -265,14 +262,12 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       let returnAmount: string;
 
       if (mode === 'buy') {
-        const cost = await tokenContract.getBuyPrice(amountWei);
-        const costEth = parseFloat(formatEther(cost));
-        const tradeCreatorFee = costEth * CREATOR_FEE_RATE;
-        const tradeProtocolFee = costEth * PROTOCOL_FEE_RATE;
-        const totalCost = costEth + tradeCreatorFee + tradeProtocolFee;
+        const cost: bigint = await tokenContract.getBuyPrice(amountWei);
+        const [, , tradeTotalFee]: [bigint, bigint, bigint] = await tokenContract.getTradeFees(cost);
+        const totalCost = cost + tradeTotalFee;
 
         tx = await tokenContract.buyTokens(amountWei, {
-          value: parseEther(totalCost.toFixed(18)),
+          value: totalCost,
         });
         returnAmount = formatEther(cost);
       } else {
@@ -453,14 +448,12 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
               <span>Protocol Fee (0.800%)</span>
               <span className="font-mono text-gray-600 dark:text-gray-400">{parseFloat(protocolFee).toFixed(6)} TEST</span>
             </div>
-            {amount && parseFloat(amount) > 0 && parseFloat(estimatedCost) > 0 && (
-              <div className={`flex justify-between items-center font-bold text-sm mt-2 pt-2 border-t ${mode === 'buy' ? 'border-pump-green/20' : 'border-pump-red/20'}`}>
-                <span className="text-gray-900 dark:text-white">{mode === 'buy' ? 'Total Cost:' : 'You Receive:'}</span>
-                <span className={`font-mono ${mode === 'buy' ? 'text-pump-green' : 'text-pump-red'}`}>
-                  {parseFloat(estimatedCost).toFixed(6)} TEST
-                </span>
-              </div>
-            )}
+            <div className={`flex justify-between items-center font-bold text-sm mt-2 pt-2 border-t ${mode === 'buy' ? 'border-pump-green/20' : 'border-pump-red/20'}`}>
+              <span className="text-gray-900 dark:text-white">{mode === 'buy' ? 'Total Cost:' : 'You Receive:'}</span>
+              <span className={`font-mono ${mode === 'buy' ? 'text-pump-green' : 'text-pump-red'}`}>
+                {parseFloat(estimatedCost || '0').toFixed(6)} TEST
+              </span>
+            </div>
           </div>
 
           <button

@@ -137,7 +137,7 @@ export default function Home() {
             maxReserve,
             volume24h: parseFloat(token.computed_volume_24h ?? token.volume_24h) || 0,
             priceChange5m: token.price_change_5m !== undefined && token.price_change_5m !== null ? parseFloat(token.price_change_5m) : null,
-            priceChange1h: token.price_change_1h !== undefined && token.price_change_1h !== null ? parseFloat(token.price_change_1h) : null,
+            priceChange4h: token.price_change_4h !== undefined && token.price_change_4h !== null ? parseFloat(token.price_change_4h) : null,
             priceChange6h: token.price_change_6h !== undefined && token.price_change_6h !== null ? parseFloat(token.price_change_6h) : null,
             traderCount: parseInt(token.computed_trader_count ?? token.trader_count) || 0,
             lastTradeType: token.last_trade_type ?? null,
@@ -308,6 +308,17 @@ export default function Home() {
     checkConnection();
   }, []);
 
+  useEffect(() => {
+    const onMetricsUpdated = () => {
+      void fetchRealTokens();
+    };
+
+    window.addEventListener('token-metrics-updated', onMetricsUpdated as EventListener);
+    return () => {
+      window.removeEventListener('token-metrics-updated', onMetricsUpdated as EventListener);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white dark:bg-pump-bg text-gray-900 dark:text-pump-text font-sans pb-20 relative">
       <Header
@@ -364,7 +375,7 @@ export default function Home() {
                         <th className="px-4 py-3 font-semibold">24H VOL</th>
                         <th className="px-4 py-3 font-semibold">TRADERS</th>
                         <th className="px-4 py-3 font-semibold">5M</th>
-                        <th className="px-4 py-3 font-semibold">1H</th>
+                        <th className="px-4 py-3 font-semibold">4H</th>
                         <th className="px-4 py-3 font-semibold">6H</th>
                       </tr>
                     </thead>
@@ -374,7 +385,7 @@ export default function Home() {
                           volume24h: coin.volume24h ?? 0,
                           traderCount: coin.traderCount ?? 0,
                           priceChange5m: coin.priceChange5m ?? null,
-                          priceChange1h: coin.priceChange1h ?? null,
+                          priceChange4h: coin.priceChange4h ?? null,
                           priceChange6h: coin.priceChange6h ?? null,
                         };
                         const sparkPath = tableSparkPaths[String(coin.id)] || '';
@@ -433,7 +444,7 @@ export default function Home() {
                             <td className="px-4 py-3 font-medium">{formatVolume(overview.volume24h)}</td>
                             <td className="px-4 py-3 font-medium">{formatTraderCount(overview.traderCount)}</td>
                             <td className={`px-4 py-3 font-semibold ${overview.priceChange5m !== null && overview.priceChange5m < 0 ? 'text-pump-red' : 'text-pump-green'}`}>{formatChangeValue(overview.priceChange5m)}</td>
-                            <td className={`px-4 py-3 font-semibold ${overview.priceChange1h !== null && overview.priceChange1h < 0 ? 'text-pump-red' : 'text-pump-green'}`}>{formatChangeValue(overview.priceChange1h)}</td>
+                            <td className={`px-4 py-3 font-semibold ${overview.priceChange4h !== null && overview.priceChange4h < 0 ? 'text-pump-red' : 'text-pump-green'}`}>{formatChangeValue(overview.priceChange4h)}</td>
                             <td className={`px-4 py-3 font-semibold ${overview.priceChange6h !== null && overview.priceChange6h < 0 ? 'text-pump-red' : 'text-pump-green'}`}>{formatChangeValue(overview.priceChange6h)}</td>
                           </tr>
                         );

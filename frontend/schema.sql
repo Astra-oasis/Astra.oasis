@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS tokens (
   volume_24h NUMERIC(36, 18) DEFAULT 0,
   price_change_5m NUMERIC(10, 4) DEFAULT 0,
   price_change_1h NUMERIC(10, 4) DEFAULT 0,
-  price_change_6h NUMERIC(10, 4) DEFAULT 0,
+    price_change_4h NUMERIC(10, 4) DEFAULT 0,
+    price_change_6h NUMERIC(10, 4) DEFAULT 0,
   trader_count INTEGER DEFAULT 0,
   -- Timestamp tracking for price changes
   price_snapshot_time TIMESTAMP,
@@ -96,7 +97,8 @@ CREATE TABLE IF NOT EXISTS tokens (
   volume_24h NUMERIC(36, 18) DEFAULT 0,
   price_change_5m NUMERIC(10, 4) DEFAULT 0,
   price_change_1h NUMERIC(10, 4) DEFAULT 0,
-  price_change_6h NUMERIC(10, 4) DEFAULT 0,
+    price_change_4h NUMERIC(10, 4) DEFAULT 0,
+    price_change_6h NUMERIC(10, 4) DEFAULT 0,
   trader_count INTEGER DEFAULT 0,
   -- Timestamp tracking for price changes
   price_snapshot_time TIMESTAMP,

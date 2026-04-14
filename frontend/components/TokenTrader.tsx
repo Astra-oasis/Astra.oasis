@@ -147,13 +147,6 @@ export default function TokenTrader({ selectedToken, onSuccess }: TokenTraderPro
           status: 'completed',
         }),
       })
-      if (res.ok) {
-        await fetch('/api/tokens/calculate-metrics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token_id: tokenData.token_id }),
-        })
-      }
     } catch (error) {
       console.warn('Error saving purchase:', error)
     }
