@@ -16,24 +16,11 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
 
     useEffect(() => {
         const fetchMetrics = async () => {
-            if (!coin.tokenAddress && !coin.id) {
-                setLoading(false);
-                return;
-            }
-
+            if (!coin.id) { setLoading(false); return; }
             try {
-                const response = await fetch('/api/tokens/calculate-metrics', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        token_id: coin.id,
-                        token_address: coin.tokenAddress || coin.contractAddress,
-                    }),
-                });
-                const data = await response.json();
-                if (data.success && data.data) {
-                    setMetrics(data.data);
-                }
+                const res = await fetch(`/api/tokens/update-metrics?token_id=${coin.id}`);
+                const data = await res.json();
+                if (data.success && data.data) setMetrics(data.data);
             } catch (error) {
                 console.error('Error fetching metrics:', error);
             } finally {
@@ -42,16 +29,14 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
         };
 
         fetchMetrics();
-        const interval = setInterval(fetchMetrics, 10000);
-        const onMetricsUpdated = () => {
-            fetchMetrics();
-        };
+        const interval = setInterval(fetchMetrics, 8000);
+        const onMetricsUpdated = () => fetchMetrics();
         window.addEventListener('token-metrics-updated', onMetricsUpdated as EventListener);
         return () => {
             clearInterval(interval);
             window.removeEventListener('token-metrics-updated', onMetricsUpdated as EventListener);
         };
-    }, [coin.tokenAddress, coin.id, coin.contractAddress]);
+    }, [coin.id]);
 
     const openExplorer = (address: string) => {
         window.open(`${OASIS_EXPLORER_URL}/${address}`, '_blank');
@@ -86,7 +71,7 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
     const price = currentPriceOverride && currentPriceOverride > 0 ? currentPriceOverride : metricsPrice;
     const marketCap = metrics ? parseFloat(metrics.marketcap) || 0 : 0;
     const change5m = metrics ? parseFloat(metrics.price_change_5m) || 0 : 0;
-    const change4h = metrics ? parseFloat(metrics.price_change_4h) || 0 : 0;
+    const change1h = metrics ? parseFloat(metrics.price_change_1h) || 0 : 0;
     const change6h = metrics ? parseFloat(metrics.price_change_6h) || 0 : 0;
 
     return (
@@ -174,11 +159,11 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
 
                         <div className="flex flex-col justify-center min-w-fit">
                             <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
-                                4h
+                                1h
                             </div>
-                            <div className={`text-lg font-bold font-mono flex items-center gap-1 ${getPriceChangeColor(change4h)}`}>
-                                {getPriceChangeIcon(change4h)}
-                                {change4h.toFixed(2)}%
+                            <div className={`text-lg font-bold font-mono flex items-center gap-1 ${getPriceChangeColor(change1h)}`}>
+                                {getPriceChangeIcon(change1h)}
+                                {change1h.toFixed(2)}%
                             </div>
                         </div>
 

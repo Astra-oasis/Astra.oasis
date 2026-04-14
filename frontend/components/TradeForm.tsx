@@ -195,6 +195,9 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       if (response.ok) {
         console.log('Purchase saved to database');
 
+        // Metrics đã được tính trong purchases API — dispatch event để UI refresh ngay
+        window.dispatchEvent(new CustomEvent('token-metrics-updated'));
+
         // Update bonding progress in DB (buy increases reserve, sell decreases)
         try {
           const delta = type === 'buy' ? parseFloat(totalPrice) : -parseFloat(totalPrice);
