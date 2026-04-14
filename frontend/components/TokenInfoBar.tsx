@@ -3,48 +3,71 @@
 import React, { useEffect, useState } from 'react';
 import { Coin } from '../types';
 import { ExternalLink, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { formatMarketCap } from '../utils/formatters';
 
 interface TokenInfoBarProps {
     coin: Coin;
     currentPriceOverride?: number;
 }
 
+interface DbTokenSnapshot {
+    marketcap?: string | number;
+    volume_24h?: string | number;
+    price_change_5m?: string | number;
+    price_change_1h?: string | number;
+    price_change_6h?: string | number;
+    price_snapshot_value?: string | number;
+    image_url?: string;
+}
+
 const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride }) => {
     const [metrics, setMetrics] = useState<any>(null);
+    const [dbToken, setDbToken] = useState<DbTokenSnapshot | null>(null);
+    const [imageFailed, setImageFailed] = useState(false);
     const [loading, setLoading] = useState(true);
     const OASIS_EXPLORER_URL = 'https://testnet.explorer.sapphire.oasis.io/address';
 
     useEffect(() => {
-        const fetchMetrics = async () => {
+        const fetchData = async () => {
             if (!coin.tokenAddress && !coin.id) {
                 setLoading(false);
                 return;
             }
 
             try {
-                const response = await fetch('/api/tokens/calculate-metrics', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        token_id: coin.id,
-                        token_address: coin.tokenAddress || coin.contractAddress,
-                    }),
-                });
-                const data = await response.json();
-                if (data.success && data.data) {
-                    setMetrics(data.data);
+                if (coin.id) {
+                    const dbResponse = await fetch(`/api/tokens/${coin.id}`);
+                    const dbData = await dbResponse.json();
+                    if (dbData.success && dbData.data) {
+                        setDbToken(dbData.data);
+                    }
+                }
+
+                if (coin.id || coin.tokenAddress || coin.contractAddress) {
+                    const response = await fetch('/api/tokens/calculate-metrics', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            token_id: coin.id,
+                            token_address: coin.tokenAddress || coin.contractAddress,
+                        }),
+                    });
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        setMetrics(data.data);
+                    }
                 }
             } catch (error) {
-                console.error('Error fetching metrics:', error);
+                console.error('Error fetching token info bar data:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchMetrics();
-        const interval = setInterval(fetchMetrics, 10000);
+        fetchData();
+        const interval = setInterval(fetchData, 10000);
         const onMetricsUpdated = () => {
-            fetchMetrics();
+            fetchData();
         };
         window.addEventListener('token-metrics-updated', onMetricsUpdated as EventListener);
         return () => {
@@ -81,18 +104,70 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
         return null;
     };
 
-    const volume = metrics ? parseFloat(metrics.volume_24h) || 0 : 0;
-    const metricsPrice = metrics ? parseFloat(metrics.price_snapshot_value) || 0 : 0;
-    const price = currentPriceOverride && currentPriceOverride > 0 ? currentPriceOverride : metricsPrice;
-    const marketCap = metrics ? parseFloat(metrics.marketcap) || 0 : 0;
-    const change5m = metrics ? parseFloat(metrics.price_change_5m) || 0 : 0;
-    const change4h = metrics ? parseFloat(metrics.price_change_4h) || 0 : 0;
-    const change6h = metrics ? parseFloat(metrics.price_change_6h) || 0 : 0;
+    const parseMetricNullable = (value: unknown): number | null => {
+        if (value === null || value === undefined) return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    const pickMetric = (...values: Array<number | null | undefined>) => {
+        const picked = values.find((value) => value !== null && value !== undefined);
+        return picked ?? 0;
+    };
+
+    const dbMarketCap = parseMetricNullable(dbToken?.marketcap);
+    const dbVolume = parseMetricNullable(dbToken?.volume_24h);
+    const dbPriceSnapshot = parseMetricNullable(dbToken?.price_snapshot_value);
+    const dbChange5m = parseMetricNullable(dbToken?.price_change_5m);
+    const dbChange1h = parseMetricNullable(dbToken?.price_change_1h);
+    const dbChange6h = parseMetricNullable(dbToken?.price_change_6h);
+
+    const metricsMarketCap = parseMetricNullable(metrics?.marketcap);
+    const metricsVolume = parseMetricNullable(metrics?.volume_24h);
+    const metricsPrice = parseMetricNullable(metrics?.price_snapshot_value);
+    const metricsChange5m = parseMetricNullable(metrics?.price_change_5m);
+    const metricsChange1h = parseMetricNullable(metrics?.price_change_1h);
+    const metricsChange6h = parseMetricNullable(metrics?.price_change_6h);
+
+    const coinPrice = coin.priceHistory?.length ? parseMetricNullable(coin.priceHistory[coin.priceHistory.length - 1]?.price) : null;
+    const coinMarketCap = parseMetricNullable(coin.marketCap);
+    const coinVolume = parseMetricNullable(coin.volume24h);
+    const coinChange5m = parseMetricNullable(coin.priceChange5m);
+    const coinChange1h = parseMetricNullable(coin.priceChange1h);
+    const coinChange6h = parseMetricNullable(coin.priceChange6h);
+
+    const price = currentPriceOverride && currentPriceOverride > 0
+        ? currentPriceOverride
+        : pickMetric(dbPriceSnapshot, coinPrice, metricsPrice);
+    const marketCap = pickMetric(dbMarketCap, coinMarketCap, metricsMarketCap);
+    const volume = pickMetric(dbVolume, coinVolume, metricsVolume);
+    const change5m = pickMetric(dbChange5m, coinChange5m, metricsChange5m);
+    const change1h = pickMetric(dbChange1h, coinChange1h, metricsChange1h);
+    const change6h = pickMetric(dbChange6h, coinChange6h, metricsChange6h);
+    const tokenImage = coin.imageUrl || dbToken?.image_url || '';
+
+    useEffect(() => {
+        setImageFailed(false);
+    }, [tokenImage]);
 
     return (
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-white dark:bg-pump-card border border-gray-300 dark:border-gray-800 rounded-lg p-4 mb-4 gap-4 md:gap-8">
             {/* Left: Token Info */}
             <div className="flex items-center gap-4 flex-1">
+                <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 shrink-0">
+                    {tokenImage && !imageFailed ? (
+                        <img
+                            src={tokenImage}
+                            alt={`${coin.name} logo`}
+                            className="w-full h-full object-cover"
+                            onError={() => setImageFailed(true)}
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs font-bold">
+                            {coin.ticker?.slice(0, 3) || 'N/A'}
+                        </div>
+                    )}
+                </div>
                 <div className="flex flex-col">
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                         {coin.name}
@@ -140,7 +215,7 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
                                 Market Cap
                             </div>
                             <div className="text-lg font-bold text-gray-900 dark:text-white font-mono">
-                                ${marketCap ? (marketCap / 1000000).toFixed(2) : '0.00'}M
+                                {formatMarketCap(marketCap)}
                             </div>
                         </div>
 
@@ -174,11 +249,11 @@ const TokenInfoBar: React.FC<TokenInfoBarProps> = ({ coin, currentPriceOverride 
 
                         <div className="flex flex-col justify-center min-w-fit">
                             <div className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
-                                4h
+                                1h
                             </div>
-                            <div className={`text-lg font-bold font-mono flex items-center gap-1 ${getPriceChangeColor(change4h)}`}>
-                                {getPriceChangeIcon(change4h)}
-                                {change4h.toFixed(2)}%
+                            <div className={`text-lg font-bold font-mono flex items-center gap-1 ${getPriceChangeColor(change1h)}`}>
+                                {getPriceChangeIcon(change1h)}
+                                {change1h.toFixed(2)}%
                             </div>
                         </div>
 
