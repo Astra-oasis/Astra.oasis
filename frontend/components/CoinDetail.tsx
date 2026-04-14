@@ -91,15 +91,10 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
     }
   };
 
-  const loadTokenMetrics = async (currentPrice?: number) => {
-    if (!coin.tokenAddress) return;
+  const loadTokenMetrics = async (_currentPrice?: number) => {
+    if (!coin.id) return;
     try {
-      const resolvedPrice = currentPrice ?? tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price;
-      const res = await fetch('/api/tokens/calculate-metrics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token_address: coin.tokenAddress, current_price: resolvedPrice }),
-      });
+      const res = await fetch(`/api/tokens/update-metrics?token_id=${coin.id}`);
       const data = await res.json();
       if (data.success && data.data) setTokenMetrics(data.data);
     } catch { /* silent */ }
@@ -219,11 +214,24 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
 
     const disconnectCommentsStream = connectCommentsStream();
 
-    const priceInterval = setInterval(loadRealTokenData, 5_000);
-    const metricsInterval = setInterval(loadTokenMetrics, 10_000);
+    const priceInterval    = setInterval(loadRealTokenData, 5_000);
+    const metricsInterval  = setInterval(loadTokenMetrics, 10_000);
     const progressInterval = setInterval(loadBondingProgress, 15_000);
-    const tradesInterval = setInterval(fetchRealTrades, 5_000);
+    const tradesInterval   = setInterval(fetchRealTrades, 5_000);
     const commentsFallbackInterval = setInterval(fetchRealComments, 20_000);
+
+    // Recalculate price_change windows mỗi 60s (sliding window)
+    const recalcInterval = setInterval(async () => {
+      if (!coin.id) return;
+      try {
+        await fetch('/api/tokens/calculate-metrics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token_id: coin.id }),
+        });
+        loadTokenMetrics();
+      } catch { /* silent */ }
+    }, 60_000);
 
     return () => {
       clearInterval(priceInterval);
@@ -231,6 +239,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
       clearInterval(progressInterval);
       clearInterval(tradesInterval);
       clearInterval(commentsFallbackInterval);
+      clearInterval(recalcInterval);
       disconnectCommentsStream();
     };
   }, [coin]);

@@ -66,21 +66,33 @@ export async function calculateAndStoreTokenMetrics({ tokenId, currentPrice }: I
   );
   const trader_count = parseInt(traderRes.rows[0].cnt) || 0;
 
-  // ── Price changes: window-based (giống pump.fun) ──────────────────────
-  // Giá tại mốc X phút trước = giao dịch cuối cùng có created_at <= NOW() - X phút
-  // Nếu không có → dùng price_snapshot_value (giá khởi tạo)
+  // ── Lưu snapshot giá hiện tại ────────────────────────────────────────
+  await query(
+    `INSERT INTO price_snapshots (token_id, price, recorded_at) VALUES ($1, $2, NOW())`,
+    [tokenId, price]
+  );
+
+  // ── Price changes: so giá hiện tại với snapshot tại mốc thời gian ────
+  // Giá quá khứ = snapshot gần nhất TẠI hoặc TRƯỚC mốc đó
   const getPriceAtWindow = async (minutes: number): Promise<number | null> => {
     const r = await query(
-      `SELECT price_per_token FROM purchases
-       WHERE token_id = $1 AND status = 'completed'
-         AND created_at <= NOW() - ($2 * INTERVAL '1 minute')
-       ORDER BY created_at DESC LIMIT 1`,
+      `SELECT price FROM price_snapshots
+       WHERE token_id = $1
+         AND recorded_at <= NOW() - ($2 * INTERVAL '1 minute')
+       ORDER BY recorded_at DESC LIMIT 1`,
       [tokenId, minutes]
     );
-    if (r.rows.length > 0) return parseFloat(r.rows[0].price_per_token);
-    // Fallback: giá khởi tạo của token
-    const initPrice = parseFloat(token.price_snapshot_value || '0');
-    return initPrice > 0 ? initPrice : null;
+    if (r.rows.length > 0) return parseFloat(r.rows[0].price);
+
+    // Không có snapshot trước mốc → lấy snapshot đầu tiên
+    const first = await query(
+      `SELECT price FROM price_snapshots
+       WHERE token_id = $1
+       ORDER BY recorded_at ASC LIMIT 1`,
+      [tokenId]
+    );
+    if (first.rows.length > 0) return parseFloat(first.rows[0].price);
+    return 0.05; // giá khởi tạo
   };
 
   const calcChange = (past: number | null) =>
@@ -88,7 +100,7 @@ export async function calculateAndStoreTokenMetrics({ tokenId, currentPrice }: I
 
   let price_change_5m = 0, price_change_1h = 0, price_change_6h = 0;
 
-  if (latestTradePrice !== null && price > 0) {
+  if (price > 0) {
     try {
       const [p5m, p1h, p6h] = await Promise.all([
         getPriceAtWindow(5),
