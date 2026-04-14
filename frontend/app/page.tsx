@@ -390,7 +390,7 @@ export default function Home() {
                                 <img src={coin.imageUrl} alt={coin.name} className="h-9 w-9 rounded-full object-cover" />
                                 <div className="min-w-0">
                                   <p className="truncate font-semibold">{coin.name}</p>
-                                  <p className="truncate text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{coin.ticker}</p>
+                                  <p className="truncate text-xs tracking-wide text-gray-500 dark:text-gray-400">{coin.ticker}</p>
                                 </div>
                               </div>
                             </td>
