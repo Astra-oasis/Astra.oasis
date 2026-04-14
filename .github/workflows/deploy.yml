@@ -28,3 +28,41 @@ jobs:
           tags: |
             ${{ env.IMAGE_FRONTEND }}:latest
             ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/action_oasis
+          chmod 600 ~/.ssh/action_oasis
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Checkout infra-platform
+        uses: actions/checkout@v4
+        with:
+          repository: astra-oasis/infra-platform
+          token: ${{ secrets.INFRA_REPO_TOKEN }}
+          path: infra-platform
+
+      - name: Create .env file
+        run: |
+          mkdir -p infra-platform/services/astra-oasis
+          echo "${{ secrets.ENV_FILE }}" > infra-platform/services/astra-oasis/.env
+
+      - name: Run deploy playbook
+        env:
+          GITLAB_USER: ${{ secrets.GITLAB_REGISTRY_USER }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_REGISTRY_TOKEN }}
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ansible-playbook infra-platform/ansible/playbooks/deploy.yml \
+            -i infra-platform/ansible/inventory/hosts.yml \
+            --private-key ~/.ssh/action_oasis
