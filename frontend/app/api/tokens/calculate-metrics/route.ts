@@ -131,11 +131,31 @@ export async function POST(request: NextRequest) {
         );
         const volume_24h = parseFloat(volume24hResult.rows[0].volume) || 0;
 
-        // Calculate Trader Count (unique buyers + sellers)
+                // Calculate holder count: wallets with current net balance > 0
         const traderCountResult = await query(
-            `SELECT COUNT(DISTINCT buyer_address) + COUNT(DISTINCT seller_address) as count
-             FROM purchases
-             WHERE token_id = $1 AND (buyer_address IS NOT NULL OR seller_address IS NOT NULL)`,
+                        `SELECT COUNT(*) AS count
+                         FROM (
+                                 SELECT address
+                                 FROM (
+                                         SELECT buyer_address AS address, SUM(quantity::numeric) AS net_qty
+                                         FROM purchases
+                                         WHERE token_id = $1
+                                             AND buyer_address IS NOT NULL
+                                             AND status = 'completed'
+                                         GROUP BY buyer_address
+
+                                         UNION ALL
+
+                                         SELECT seller_address AS address, -SUM(quantity::numeric) AS net_qty
+                                         FROM purchases
+                                         WHERE token_id = $1
+                                             AND seller_address IS NOT NULL
+                                             AND status = 'completed'
+                                         GROUP BY seller_address
+                                 ) net_moves
+                                 GROUP BY address
+                                 HAVING SUM(net_qty) > 0
+                         ) holder_wallets`,
             [tokenId]
         );
         const trader_count = parseInt(traderCountResult.rows[0].count) || 0;

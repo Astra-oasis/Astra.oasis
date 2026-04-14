@@ -4,6 +4,7 @@
   "description": "Token Creator DApp on Oasis Sapphire Testnet",
   "scripts": {
     "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
     "compile": "npx hardhat compile",
     "deploy-factory": "npx hardhat run scripts/deploy-factory.ts --network sapphire-testnet",
     "test-bonding": "npx hardhat run test/test-bonding-curve.ts --network sapphire-testnet",

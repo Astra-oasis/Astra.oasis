@@ -17,6 +17,8 @@ import { wrapEthereumProvider } from '@oasisprotocol/sapphire-paratime';
 import { TOKEN_ABI } from '../abi/factoryAbi';
 
 const BONDING_TARGET = 10000; // TEST
+const CREATOR_FEE_RATE = 0.003;
+const PROTOCOL_FEE_RATE = 0.008;
 
 interface CoinDetailProps {
   coin: Coin;
@@ -113,6 +115,10 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
           type: p.trade_type === 'sell' ? 'sell' : 'buy',
           amount: null,
           price: parseFloat(p.price_per_token) || 0,
+          totalPrice: parseFloat(p.total_price) || 0,
+          creatorFee: (parseFloat(p.total_price) || 0) * CREATOR_FEE_RATE,
+          protocolFee: (parseFloat(p.total_price) || 0) * PROTOCOL_FEE_RATE,
+          totalFee: (parseFloat(p.total_price) || 0) * (CREATOR_FEE_RATE + PROTOCOL_FEE_RATE),
           timestamp: p.created_at,
           user: p.buyer_address || p.seller_address || '0x...',
           txHash: p.transaction_hash || null,
@@ -279,6 +285,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
             tokenId={coin.id}
             ticker={coin.ticker}
             currentPrice={currentPrice}
+            createdAt={coin.createdAt}
             refreshKey={chartRefreshKey}
           />
 
@@ -287,7 +294,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
             {/* Header row */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">Bonding Curve Progress</h3>
+                <h3 className="text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">BONDING CURVE PROGRESS</h3>
               </div>
               <div className="flex items-center gap-3 text-sm font-bold">
                 <span className="text-pump-green">{progress.toFixed(4)}%</span>
@@ -315,7 +322,7 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
             <div className="mt-4 flex gap-3 items-start bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-400 dark:border-yellow-700/30 p-3 rounded text-[11px] text-yellow-700 dark:text-yellow-500">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <p>
-                When the bonding curve reaches <b>10,000 TEST</b>, all liquidity will be deposited into{' '}
+                When the BONDING CURVE reaches <b>10,000 TEST</b>, all liquidity will be deposited into{' '}
                 <b>Oasis DEX</b> and burned. Token graduates to open market.
               </p>
             </div>

@@ -18,11 +18,9 @@ const getTimeAgo = (timestamp: number) => {
 };
 
 const CoinCard: React.FC<CoinCardProps> = ({ coin, onClick }) => {
-  // Sử dụng trực tiếp bondingCurveProgress thay vì số ngẫu nhiên
   const priceChange = coin.bondingCurveProgress || 0;
-  
-  // Progress bar logic: yellow if bonding curve is high like in the screenshot
   const progressCls = coin.bondingCurveProgress > 80 ? 'bg-yellow-400' : 'bg-pump-green';
+  const isBuy = coin.lastTradeType !== 'sell'; // default xanh nếu chưa có giao dịch
 
   return (
     <div
@@ -67,8 +65,8 @@ const CoinCard: React.FC<CoinCardProps> = ({ coin, onClick }) => {
             />
           </div>
 
-          <div className="font-medium text-pump-green">
-            ↑ {priceChange.toFixed(2)}%
+          <div className={`font-medium ${isBuy ? 'text-pump-green' : 'text-pump-red'}`}>
+            {isBuy ? '↑' : '↓'} {priceChange.toFixed(2)}%
           </div>
         </div>
 

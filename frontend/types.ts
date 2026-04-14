@@ -6,6 +6,7 @@ export interface Coin {
   imageUrl: string;
   creator: string;
   marketCap: number;
+  maxReserve?: number;
   replies: number;
   bondingCurveProgress: number; // 0 to 100
   createdAt: number;
@@ -13,6 +14,12 @@ export interface Coin {
   priceHistory: { time: string; price: number }[];
   tokenAddress?: string; // Added for real contract interaction
   contractAddress?: string; // Smart contract address
+  volume24h?: number;
+  priceChange5m?: number;
+  priceChange1h?: number;
+  priceChange6h?: number;
+  traderCount?: number;
+  lastTradeType?: 'buy' | 'sell' | null;
 }
 
 export interface Comment {
@@ -38,6 +45,10 @@ export interface Trade {
   type: 'buy' | 'sell';
   amount?: number | null;
   price: number;
+  totalPrice?: number;
+  creatorFee?: number;
+  protocolFee?: number;
+  totalFee?: number;
   timestamp: string;
   user: string;
   txHash?: string | null;

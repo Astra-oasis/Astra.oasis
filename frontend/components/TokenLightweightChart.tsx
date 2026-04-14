@@ -18,6 +18,7 @@ interface TokenLightweightChartProps {
     tokenId: string | number;
     ticker: string;
     currentPrice?: number;
+    createdAt?: number;
     refreshKey?: number;
 }
 
@@ -33,6 +34,22 @@ const INTERVAL_SECONDS: Record<Interval, number> = {
     '4h': 14400,
     '1d': 86400,
 };
+
+const TZ_UTC7 = 'Asia/Bangkok';
+const timeFormatterUtc7 = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ_UTC7,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+});
+const dateTimeFormatterUtc7 = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TZ_UTC7,
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+});
 
 const pad2 = (n: number) => n.toString().padStart(2, '0');
 
@@ -64,10 +81,22 @@ function formatCountdown(seconds: number): string {
     return `${pad2(m)}:${pad2(sec)}`;
 }
 
+function timeToUnixSeconds(time: Time): number {
+    if (typeof time === 'number') return time;
+    if (typeof time === 'string') return Math.floor(new Date(time).getTime() / 1000);
+    return Math.floor(Date.UTC(time.year, time.month - 1, time.day) / 1000);
+}
+
+function formatTimeUtc7(time: Time, withDate = false): string {
+    const d = new Date(timeToUnixSeconds(time) * 1000);
+    return withDate ? dateTimeFormatterUtc7.format(d) : timeFormatterUtc7.format(d);
+}
+
 export default function TokenLightweightChart({
     tokenId,
     ticker,
     currentPrice: _currentPrice,
+    createdAt,
     refreshKey,
 }: TokenLightweightChartProps) {
     const [mounted, setMounted] = useState(false);
@@ -134,13 +163,26 @@ export default function TokenLightweightChart({
         (source: CandleWithVolume[]): CandleWithVolume[] => {
             const cp = typeof _currentPrice === 'number' && _currentPrice > 0 ? _currentPrice : null;
             const nowBucket = getBucketTime(nowSec, intervalSec);
+            const startBucket = typeof createdAt === 'number' && createdAt > 0
+                ? getBucketTime(Math.floor(createdAt / 1000), intervalSec)
+                : nowBucket;
 
             if (source.length === 0) {
                 if (!cp) return [];
-                return [{
-                    time: nowBucket as Time,
-                    open: cp, high: cp, low: cp, close: cp, volume: 0,
-                }];
+
+                const flatCandles: CandleWithVolume[] = [];
+                for (let t = startBucket; t <= nowBucket; t += intervalSec) {
+                    flatCandles.push({
+                        time: t as Time,
+                        open: cp,
+                        high: cp,
+                        low: cp,
+                        close: cp,
+                        volume: 0,
+                    });
+                }
+
+                return flatCandles;
             }
 
             // Normalize + sort
@@ -222,7 +264,7 @@ export default function TokenLightweightChart({
 
             return filled;
         },
-        [_currentPrice, intervalSec, nowSec]
+        [_currentPrice, createdAt, intervalSec, nowSec]
     );
 
     // ─── Fetch OHLCV ─────────────────────────────────────────────────────────
@@ -266,6 +308,9 @@ export default function TokenLightweightChart({
                 textColor: themeColors.textColor,
                 fontSize: 11,
             },
+            localization: {
+                timeFormatter: (time: Time) => formatTimeUtc7(time, true),
+            },
             grid: {
                 vertLines: { color: themeColors.gridColor },
                 horzLines: { color: themeColors.gridColor },
@@ -290,6 +335,7 @@ export default function TokenLightweightChart({
                 minBarSpacing: 2,
                 fixLeftEdge: false,
                 fixRightEdge: false,
+                tickMarkFormatter: (time: Time) => formatTimeUtc7(time, interval === '1d'),
             },
             handleScale: {
                 mouseWheel: true,
@@ -433,6 +479,17 @@ export default function TokenLightweightChart({
     const liveCandles = buildLiveCandles(candles);
     const symbol = `${ticker.toUpperCase()}/TEST`;
     const isPositive = priceChange >= 0;
+
+    // Vol 24h — tổng volume 24h gần nhất từ candles gốc (không phải live)
+    const vol24h = (() => {
+        const cutoff = Math.floor(Date.now() / 1000) - 86400;
+        const total = candles.reduce((sum, c) => {
+            return Number(c.time) >= cutoff ? sum + (c.volume ?? 0) : sum;
+        }, 0);
+        if (total >= 1_000_000) return `${(total / 1_000_000).toFixed(2)}M`;
+        if (total >= 1_000) return `${(total / 1_000).toFixed(2)}K`;
+        return total.toFixed(2);
+    })();
 
     return (
         <div style={{
