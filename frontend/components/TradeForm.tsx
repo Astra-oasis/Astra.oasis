@@ -298,15 +298,6 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       let returnAmount: string;
 
       if (mode === 'buy') {
-<<<<<<< HEAD
-        const cost: bigint = await tokenContract.getBuyPrice(amountWei);
-        const [, , tradeTotalFee]: [bigint, bigint, bigint] = await tokenContract.getTradeFees(cost);
-        const totalCost = cost + tradeTotalFee;
-
-        tx = await tokenContract.buyTokens(amountWei, {
-          value: totalCost,
-        });
-=======
         const cost = await tokenContract.getBuyPrice(amountWei);
 
         // Lấy fee từ contract nếu có, fallback tính tay nếu token cũ không có getTradeFees
@@ -321,7 +312,6 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
         const totalCost = cost + totalFee;
 
         tx = await tokenContract.buyTokens(amountWei, { value: totalCost });
->>>>>>> 03ca224 (save local work)
         returnAmount = formatEther(cost);
       } else {
         const sellReturn = await tokenContract.getSellPrice(amountWei);
