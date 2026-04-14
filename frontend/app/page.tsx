@@ -91,8 +91,20 @@ export default function Home() {
   const headerRef = useRef<HeaderRef>(null);
 
   const addToast = (type: ToastMessage['type'], title: string, message: string) => {
+    // Nếu đã có error toast cùng loại → rung thay vì tạo mới
+    if (type === 'error') {
+      const existing = toasts.find(t => t.type === 'error');
+      if (existing) {
+        setToasts(prev => prev.map(t =>
+          t.id === existing.id
+            ? { ...t, title, message, shakeCount: (t.shakeCount ?? 0) + 1 }
+            : t
+        ));
+        return existing.id;
+      }
+    }
     const id = Date.now().toString();
-    setToasts(prev => [...prev, { id, type, title, message }]);
+    setToasts(prev => [...prev, { id, type, title, message, shakeCount: 0 }]);
     return id;
   };
 

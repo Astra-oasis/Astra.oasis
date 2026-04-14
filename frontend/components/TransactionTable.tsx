@@ -7,6 +7,16 @@ interface TransactionTableProps {
 
 const TransactionTable: React.FC<TransactionTableProps> = ({ trades }) => {
   const OASIS_TX_EXPLORER_URL = 'https://testnet.explorer.sapphire.oasis.io/tx';
+  const vnDateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 
   const formatTradeTime = (timestampStr: string) => {
     if (!timestampStr) return '-';
@@ -49,18 +59,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({ trades }) => {
       return timestampStr;
     }
 
-    const utcMs = parsedDate.getTime();
-    const vietnamDate = new Date(utcMs + 7 * 60 * 60 * 1000);
-
-    const pad = (value: number) => value.toString().padStart(2, '0');
-    const year = vietnamDate.getUTCFullYear();
-    const month = pad(vietnamDate.getUTCMonth() + 1);
-    const day = pad(vietnamDate.getUTCDate());
-    const hours = pad(vietnamDate.getUTCHours());
-    const minutes = pad(vietnamDate.getUTCMinutes());
-    const seconds = pad(vietnamDate.getUTCSeconds());
-
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    const parts = vnDateTimeFormatter.formatToParts(parsedDate);
+    const byType = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+    return `${byType.year}-${byType.month}-${byType.day} ${byType.hour}:${byType.minute}:${byType.second}`;
   };
 
   return (

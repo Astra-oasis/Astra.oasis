@@ -42,25 +42,37 @@ export async function GET(request: NextRequest) {
 
         // Lấy từng giao dịch riêng lẻ để tính high/low chính xác
         const result = await query(
-            `SELECT
-                (FLOOR(EXTRACT(EPOCH FROM created_at) / $2) * $2)::bigint AS bucket,
-                price_per_token::float                                      AS avg_price,
-                COALESCE(
-                    quantity::float,
+            `WITH normalized AS (
+                SELECT
                     CASE
-                        WHEN price_per_token::float = 0 THEN 0
-                        ELSE total_price::float / price_per_token::float
-                    END
-                )                                                           AS qty,
-                total_price::float                                          AS total_price,
+                        WHEN created_at > NOW() + INTERVAL '30 minutes' THEN created_at - INTERVAL '7 hours'
+                        ELSE created_at
+                    END                                                      AS trade_ts,
+                    price_per_token::float                                   AS avg_price,
+                    COALESCE(
+                        quantity::float,
+                        CASE
+                            WHEN price_per_token::float = 0 THEN 0
+                            ELSE total_price::float / price_per_token::float
+                        END
+                    )                                                        AS qty,
+                    total_price::float                                       AS total_price,
+                    buyer_address
+                FROM purchases
+                WHERE token_id = $1
+                  AND price_per_token IS NOT NULL
+                  AND price_per_token::float > 0
+                  AND status = 'completed'
+            )
+            SELECT
+                (FLOOR(EXTRACT(EPOCH FROM trade_ts) / $2) * $2)::bigint     AS bucket,
+                avg_price,
+                qty,
+                total_price,
                 buyer_address,
-                created_at
-             FROM purchases
-             WHERE token_id = $1
-               AND price_per_token IS NOT NULL
-               AND price_per_token::float > 0
-               AND status = 'completed'
-             ORDER BY created_at ASC`,
+                trade_ts                                                     AS created_at
+            FROM normalized
+            ORDER BY trade_ts ASC`,
             [tokenId, secs]
         );
 

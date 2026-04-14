@@ -15,6 +15,89 @@ function floorBucket(ts: number, sec: number): number {
     return Math.floor(ts / sec) * sec;
 }
 
+function buildLiveCandlesFromSource(
+    source: Bar[],
+    intervalSec: number,
+    nowSec: number,
+    currentPrice: number | null,
+    createdAtMs?: number
+): Bar[] {
+    const nowBucket = floorBucket(nowSec, intervalSec);
+    const startBucketRaw = typeof createdAtMs === 'number' && createdAtMs > 0
+        ? floorBucket(Math.floor(createdAtMs / 1000), intervalSec)
+        : nowBucket;
+    const startBucket = Math.min(startBucketRaw, nowBucket);
+
+    if (source.length === 0) {
+        if (currentPrice === null) return [];
+        const out: Bar[] = [];
+        for (let t = startBucket; t <= nowBucket; t += intervalSec) {
+            out.push({ time: t, open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice, volume: 0 });
+        }
+        return out;
+    }
+
+    const map = new Map<number, Bar>();
+    for (const row of source) {
+        const bkt = Math.min(floorBucket(row.time, intervalSec), nowBucket);
+        map.set(bkt, {
+            time: bkt,
+            open: Number(row.open),
+            high: Number(row.high),
+            low: Number(row.low),
+            close: Number(row.close),
+            volume: Number(row.volume ?? 0),
+        });
+    }
+
+    const sourceBuckets = Array.from(map.keys()).sort((a, b) => a - b);
+    const timelineStart = sourceBuckets.length > 0 ? Math.min(startBucket, sourceBuckets[0]) : startBucket;
+    const latestSourceBucket = sourceBuckets.length > 0 ? sourceBuckets[sourceBuckets.length - 1] : null;
+
+    const out: Bar[] = [];
+    const firstSourceOpen = sourceBuckets.length > 0 ? Number(map.get(sourceBuckets[0])?.open) : null;
+    let prevClose: number | null = Number.isFinite(firstSourceOpen as number) ? (firstSourceOpen as number) : null;
+    for (let t = timelineStart; t <= nowBucket; t += intervalSec) {
+        const existing = map.get(t);
+        if (existing) {
+            const open = prevClose ?? existing.open;
+            const merged: Bar = {
+                time: t,
+                open,
+                high: Math.max(existing.high, open, existing.close),
+                low: Math.min(existing.low, open, existing.close),
+                close: existing.close,
+                volume: Number(existing.volume ?? 0),
+            };
+            out.push(merged);
+            prevClose = merged.close;
+            continue;
+        }
+        if (prevClose === null) continue;
+        out.push({ time: t, open: prevClose, high: prevClose, low: prevClose, close: prevClose, volume: 0 });
+    }
+
+    if (out.length === 0) {
+        if (currentPrice === null) return [];
+        return [{ time: nowBucket, open: currentPrice, high: currentPrice, low: currentPrice, close: currentPrice, volume: 0 }];
+    }
+
+    const shouldApplyCurrentPrice = currentPrice !== null && (
+        source.length === 0 || latestSourceBucket === nowBucket
+    );
+    if (shouldApplyCurrentPrice) {
+        const i = out.length - 1;
+        out[i] = {
+            ...out[i],
+            close: currentPrice,
+            high: Math.max(out[i].high, out[i].open, currentPrice),
+            low: Math.min(out[i].low, out[i].open, currentPrice),
+        };
+    }
+
+    return out;
+}
+
 /** Simulate what OHLCV API returns: group trades into buckets with continuity */
 function buildOHLCV(trades: { time: number; price: number; qty: number; isBuy: boolean }[], intervalSec: number): Bar[] {
     const SLOPE = 0.00001;
@@ -300,5 +383,85 @@ describe('Live tick bucket logic', () => {
         prevBkt = nowBkt;
 
         expect(newBucket).toBe(true);
+    });
+
+    test('single trade: next bucket is created after interval boundary', () => {
+        const sec = 60;
+        const tradeBucket = floorBucket(BASE_TIME + 5, sec);
+        const source: Bar[] = [
+            { time: tradeBucket, open: 0.05, high: 0.0503, low: 0.0498, close: 0.0502, volume: 100 },
+        ];
+
+        const beforeBoundary = buildLiveCandlesFromSource(source, sec, tradeBucket + 59, 0.0502);
+        expect(beforeBoundary[beforeBoundary.length - 1].time).toBe(tradeBucket);
+
+        const afterBoundary = buildLiveCandlesFromSource(source, sec, tradeBucket + 60, 0.0502);
+        expect(afterBoundary.length).toBe(beforeBoundary.length + 1);
+        expect(afterBoundary[afterBoundary.length - 1].time).toBe(tradeBucket + sec);
+        expect(afterBoundary[afterBoundary.length - 1].open).toBeCloseTo(0.0502, 8);
+    });
+
+    test('future source timestamp is clamped so rollover is not blocked', () => {
+        const sec = 60;
+        const now = floorBucket(BASE_TIME + 120, sec);
+        const future = now + (7 * 3600); // emulate timezone-shifted row
+        const source: Bar[] = [
+            { time: future, open: 0.05, high: 0.051, low: 0.049, close: 0.0505, volume: 42 },
+        ];
+
+        const live = buildLiveCandlesFromSource(source, sec, now, 0.0505);
+        expect(live[live.length - 1].time).toBe(now);
+    });
+
+    test('first trade candle keeps source open, not overwritten by currentPrice', () => {
+        const sec = 60;
+        const bkt = floorBucket(BASE_TIME + 60, sec);
+        const source: Bar[] = [
+            { time: bkt, open: 0.05, high: 0.0502, low: 0.05, close: 0.0502, volume: 32 },
+        ];
+
+        const live = buildLiveCandlesFromSource(source, sec, bkt + 1, 0.05032);
+        const first = live[0];
+        expect(first.time).toBe(bkt);
+        expect(first.open).toBeCloseTo(0.05, 8);
+        expect(first.close).toBeCloseTo(0.05032, 8);
+        expect(first.low).toBeLessThanOrEqual(Math.min(first.open, first.close));
+        expect(first.high).toBeGreaterThanOrEqual(Math.max(first.open, first.close));
+    });
+
+    test('pre-trade flat candles are preserved after first trade appears', () => {
+        const sec = 60;
+        const createdAt = BASE_TIME; // token exists from this minute
+        const tradeBkt = floorBucket(BASE_TIME + sec, sec); // first trade in next minute
+        const source: Bar[] = [
+            { time: tradeBkt, open: 0.05, high: 0.0502, low: 0.05, close: 0.0502, volume: 10 },
+        ];
+
+        const live = buildLiveCandlesFromSource(source, sec, tradeBkt + 1, 0.0502, createdAt * 1000);
+        expect(live.length).toBe(2);
+        expect(live[0].time).toBe(floorBucket(createdAt, sec));
+        expect(live[0].open).toBeCloseTo(0.05, 8);
+        expect(live[0].close).toBeCloseTo(0.05, 8);
+        expect(live[1].time).toBe(tradeBkt);
+    });
+
+    test('after boundary without new trade: newest candle stays flat (no premature growth)', () => {
+        const sec = 60;
+        const prevBucket = floorBucket(BASE_TIME + sec, sec);
+        const nowSec = prevBucket + sec + 2; // moved to next bucket
+        const source: Bar[] = [
+            { time: prevBucket, open: 0.05, high: 0.05034, low: 0.05, close: 0.05034, volume: 34.43 },
+        ];
+
+        const live = buildLiveCandlesFromSource(source, sec, nowSec, 0.05034, BASE_TIME * 1000);
+        expect(live.length).toBeGreaterThanOrEqual(2);
+
+        const last = live[live.length - 1];
+        const prev = live[live.length - 2];
+        expect(last.time).toBe(prev.time + sec);
+        expect(last.open).toBeCloseTo(prev.close, 8);
+        expect(last.close).toBeCloseTo(prev.close, 8);
+        expect(last.high).toBeCloseTo(prev.close, 8);
+        expect(last.low).toBeCloseTo(prev.close, 8);
     });
 });

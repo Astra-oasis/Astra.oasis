@@ -1,4 +1,9 @@
-// SPDX-License-Identifier: MIT
+app-index.js:33 Trade error: Error: transaction execution reverted (action="sendTransaction", data=null, reason=null, invocation=null, revert=null, transaction={ "data": "", "from": "0x9000ddD81bCBF2851D2e2f467a0A4984Ac816224", "to": "0x41B1F747e1fdc62Fd9ED8CC5166310bf941804C1" }, receipt={ "_type": "TransactionReceipt", "blobGasPrice": null, "blobGasUsed": null, "blockHash": "0x3cccc3156dc78e8af8923a5a8fd16d283c20815ea61b128e5e121a72bf8a2825", "blockNumber": 16598649, "contractAddress": null, "cumulativeGasUsed": "30956", "from": "0x9000ddD81bCBF2851D2e2f467a0A4984Ac816224", "gasPrice": "100000000000", "gasUsed": "30956", "hash": "0x9ea7a602933a57663fa21e5568b71a111cb7bff5636e8f1eafa48e54589ffaa6", "index": 0, "logs": [  ], "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "root": null, "status": 0, "to": "0x41B1F747e1fdc62Fd9ED8CC5166310bf941804C1" }, code=CALL_EXCEPTION, version=6.16.0)
+    at makeError (errors.js:145:21)
+    at assert (errors.js:164:15)
+    at checkReceipt (provider.js:1144:68)
+    at BrowserProvider.txListener (provider.js:1190:33)
+window.console.error	@	app-index.js:33// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 contract TokenPolicyMint {

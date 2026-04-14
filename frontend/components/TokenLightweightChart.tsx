@@ -18,7 +18,7 @@ interface TokenLightweightChartProps {
     tokenId: string | number;
     ticker: string;
     currentPrice?: number;
-    createdAt?: number;
+    createdAt?: number | string;
     refreshKey?: number;
 }
 
@@ -118,6 +118,7 @@ export default function TokenLightweightChart({
     const [countdownY, setCountdownY] = useState<number | null>(null);
     const isFetchingRef = useRef(false);
     const fitPendingRef = useRef(true);
+    const pendingPostTradeAutoscaleRef = useRef(false);
 
     // Mount and detect system theme
     useEffect(() => {
@@ -163,9 +164,24 @@ export default function TokenLightweightChart({
         (source: CandleWithVolume[]): CandleWithVolume[] => {
             const cp = typeof _currentPrice === 'number' && _currentPrice > 0 ? _currentPrice : null;
             const nowBucket = getBucketTime(nowSec, intervalSec);
-            const startBucket = typeof createdAt === 'number' && createdAt > 0
-                ? getBucketTime(Math.floor(createdAt / 1000), intervalSec)
+            const createdAtSec = (() => {
+                if (typeof createdAt === 'number' && createdAt > 0) {
+                    return createdAt > 1_000_000_000_000
+                        ? Math.floor(createdAt / 1000)
+                        : Math.floor(createdAt);
+                }
+                if (typeof createdAt === 'string') {
+                    const ms = Date.parse(createdAt);
+                    if (!Number.isNaN(ms) && ms > 0) {
+                        return Math.floor(ms / 1000);
+                    }
+                }
+                return null;
+            })();
+            const startBucketRaw = createdAtSec !== null
+                ? getBucketTime(createdAtSec, intervalSec)
                 : nowBucket;
+            const startBucket = Math.min(startBucketRaw, nowBucket);
 
             if (source.length === 0) {
                 if (!cp) return [];
@@ -185,71 +201,91 @@ export default function TokenLightweightChart({
                 return flatCandles;
             }
 
-            // Normalize + sort
-            const sorted: CandleWithVolume[] = [...source]
-                .sort((a, b) => Number(a.time) - Number(b.time))
-                .map((c) => ({
-                    time: getBucketTime(Number(c.time), intervalSec) as Time,
-                    open: Number(c.open),
-                    high: Number(c.high),
-                    low: Number(c.low),
-                    close: Number(c.close),
-                    volume: Number(c.volume ?? 0),
-                }));
-
-            // Deduplicate buckets (keep last)
+            // Normalize + dedupe bucket. Any future bucket from API is clamped to nowBucket
+            // so countdown rollover is never blocked by bad/shifted timestamps.
             const bucketMap = new Map<number, CandleWithVolume>();
-            for (const c of sorted) {
-                bucketMap.set(Number(c.time), c);
+            for (const raw of source) {
+                const rawBucket = getBucketTime(Number(raw.time), intervalSec);
+                const bucket = Math.min(rawBucket, nowBucket);
+                bucketMap.set(bucket, {
+                    time: bucket as Time,
+                    open: Number(raw.open),
+                    high: Number(raw.high),
+                    low: Number(raw.low),
+                    close: Number(raw.close),
+                    volume: Number(raw.volume ?? 0),
+                });
             }
-            const deduped = Array.from(bucketMap.values()).sort(
-                (a, b) => Number(a.time) - Number(b.time)
-            );
 
-            // Fill gap buckets với flat candle (close của nến trước)
-            // Giống TradingView: không có giao dịch thì nến flat
+            const sourceBuckets = Array.from(bucketMap.keys()).sort((a, b) => a - b);
+            const timelineStart = sourceBuckets.length > 0
+                ? Math.min(startBucket, sourceBuckets[0])
+                : startBucket;
+            const latestSourceBucket = sourceBuckets.length > 0
+                ? sourceBuckets[sourceBuckets.length - 1]
+                : null;
+
             const filled: CandleWithVolume[] = [];
-            for (let i = 0; i < deduped.length; i++) {
-                filled.push(deduped[i]);
-                if (i < deduped.length - 1) {
-                    let t = Number(deduped[i].time) + intervalSec;
-                    const nextT = Number(deduped[i + 1].time);
-                    const prevClose = deduped[i].close;
-                    while (t < nextT) {
-                        filled.push({
-                            time: t as Time,
-                            open: prevClose,
-                            high: prevClose,
-                            low: prevClose,
-                            close: prevClose,
-                            volume: 0,
-                        });
-                        t += intervalSec;
-                    }
-                }
-            }
+            // Seed from the first source candle open so pre-trade flats are preserved,
+            // while the first trade candle still keeps its original open.
+            const firstSourceOpen = sourceBuckets.length > 0
+                ? Number(bucketMap.get(sourceBuckets[0])?.open)
+                : null;
+            let prevClose: number | null = Number.isFinite(firstSourceOpen as number)
+                ? (firstSourceOpen as number)
+                : null;
 
-            // Extend đến bucket hiện tại
-            let last = filled[filled.length - 1];
-            let lastT = Number(last.time);
-            while (lastT < nowBucket) {
-                const nextT = lastT + intervalSec;
+            for (let t = timelineStart; t <= nowBucket; t += intervalSec) {
+                const existing = bucketMap.get(t);
+                if (existing) {
+                    const open = prevClose ?? existing.open;
+                    const close = existing.close;
+                    const merged: CandleWithVolume = {
+                        time: t as Time,
+                        open,
+                        high: Math.max(existing.high, open, close),
+                        low: Math.min(existing.low, open, close),
+                        close,
+                        volume: Number(existing.volume ?? 0),
+                    };
+                    filled.push(merged);
+                    prevClose = merged.close;
+                    continue;
+                }
+
+                if (prevClose === null) continue;
+
                 const flat: CandleWithVolume = {
-                    time: nextT as Time,
-                    open: last.close,
-                    high: last.close,
-                    low: last.close,
-                    close: last.close,
+                    time: t as Time,
+                    open: prevClose,
+                    high: prevClose,
+                    low: prevClose,
+                    close: prevClose,
                     volume: 0,
                 };
                 filled.push(flat);
-                last = flat;
-                lastT = nextT;
+                prevClose = flat.close;
             }
 
-            // Update nến hiện tại với currentPrice
-            // Đây là nến đang hình thành - cập nhật high/low/close đúng chuẩn
-            if (cp !== null) {
+            if (filled.length === 0) {
+                return cp === null
+                    ? []
+                    : [{
+                        time: nowBucket as Time,
+                        open: cp,
+                        high: cp,
+                        low: cp,
+                        close: cp,
+                        volume: 0,
+                    }];
+            }
+
+            // Chỉ áp currentPrice lên nến hiện tại nếu bucket hiện tại có trade data.
+            // Nếu không, giữ nến mới mở ở dạng flat để tránh cảm giác "đóng sớm" nến trước.
+            const shouldApplyCurrentPrice = cp !== null && (
+                source.length === 0 || latestSourceBucket === nowBucket
+            );
+            if (shouldApplyCurrentPrice) {
                 const idx = filled.length - 1;
                 const cur = filled[idx];
                 // Wick: high = max của tất cả giá đã qua trong bucket
@@ -426,6 +462,7 @@ export default function TokenLightweightChart({
     // Refresh sau trade
     useEffect(() => {
         if (refreshKey === undefined) return;
+        pendingPostTradeAutoscaleRef.current = true;
         fetchCandles(false);
     }, [refreshKey, fetchCandles]);
 
@@ -459,6 +496,16 @@ export default function TokenLightweightChart({
                     : 'rgba(239, 83, 80, 0.4)',
             }))
         );
+
+        // Auto-scale once right after a trade so the full spike candle is visible,
+        // then keep user manual scale/zoom untouched.
+        if (pendingPostTradeAutoscaleRef.current) {
+            chartRef.current?.priceScale('right').applyOptions({
+                autoScale: true,
+                scaleMargins: { top: 0.1, bottom: 0.22 },
+            });
+            pendingPostTradeAutoscaleRef.current = false;
+        }
 
         const first = validated[0];
         const last = validated[validated.length - 1];

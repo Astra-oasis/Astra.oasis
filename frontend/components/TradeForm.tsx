@@ -247,6 +247,42 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       return;
     }
 
+    const amountNum = parseFloat(amount);
+
+    // ── Validation trước khi gọi contract ──────────────────────────────
+    if (mode === 'buy') {
+      if (amountNum < 0.1) {
+        showToast('error', 'Amount Too Small', 'Minimum buy is 0.1 token.');
+        return;
+      }
+      if (amountNum >= 900_000_000) {
+        showToast('error', 'Amount Too Large', 'Cannot buy more than 900,000,000 tokens at once.');
+        return;
+      }
+      // Kiểm tra vượt available supply — không silent fail
+      try {
+        const provider = await getProvider();
+        const contract = new Contract(coin.tokenAddress, TOKEN_ABI, provider);
+        const available = await contract.getAvailableTokens();
+        const availableNum = parseFloat(formatEther(available));
+        if (amountNum > availableNum) {
+          showToast('error', 'Exceeds Supply', `Only ${availableNum.toLocaleString()} tokens available.`);
+          return;
+        }
+      } catch (e) {
+        // Nếu không đọc được supply thì chặn luôn nếu đã vượt 900M
+        console.warn('Could not fetch available tokens:', e);
+      }
+    }
+
+    if (mode === 'sell') {
+      const tokenBal = parseFloat(tokenBalance);
+      if (amountNum > tokenBal) {
+        showToast('error', 'Insufficient Balance', `You only have ${tokenBal.toLocaleString()} ${coin.ticker.toUpperCase()}.`);
+        return;
+      }
+    }
+
     setLoading(true);
     const toastId = Date.now().toString();
     setProcessingToastId(toastId);
@@ -262,6 +298,7 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       let returnAmount: string;
 
       if (mode === 'buy') {
+<<<<<<< HEAD
         const cost: bigint = await tokenContract.getBuyPrice(amountWei);
         const [, , tradeTotalFee]: [bigint, bigint, bigint] = await tokenContract.getTradeFees(cost);
         const totalCost = cost + tradeTotalFee;
@@ -269,6 +306,22 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
         tx = await tokenContract.buyTokens(amountWei, {
           value: totalCost,
         });
+=======
+        const cost = await tokenContract.getBuyPrice(amountWei);
+
+        // Lấy fee từ contract nếu có, fallback tính tay nếu token cũ không có getTradeFees
+        let totalFee: bigint;
+        try {
+          const [,, fee] = await tokenContract.getTradeFees(cost);
+          totalFee = fee;
+        } catch {
+          // Token cũ: tính theo BPS cố định (0.3% creator + 0.8% protocol = 1.1%)
+          totalFee = cost * BigInt(110) / BigInt(10000);
+        }
+        const totalCost = cost + totalFee;
+
+        tx = await tokenContract.buyTokens(amountWei, { value: totalCost });
+>>>>>>> 03ca224 (save local work)
         returnAmount = formatEther(cost);
       } else {
         const sellReturn = await tokenContract.getSellPrice(amountWei);
