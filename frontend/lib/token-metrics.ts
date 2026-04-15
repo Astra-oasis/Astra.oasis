@@ -71,7 +71,12 @@ export async function calculateAndStoreTokenMetrics({ tokenId, currentPrice }: I
   // Fallback = price_snapshot_value cũ trong DB (giá trước trade này)
   const oldPrice = parseFloat(token.price_snapshot_value || '0.05');
 
+  // Giá khởi tạo = price_snapshot_value lúc token được tạo (0.05)
+  // Dùng token.created_at để xác định tuổi token
+  const LAUNCH_PRICE = 0.05; // giá cố định khi token mới tạo
+
   const getPriceAtWindow = async (minutes: number): Promise<number | null> => {
+    // Lấy snapshot gần nhất TRƯỚC mốc thời gian
     const r = await query(
       `SELECT price FROM price_snapshots
        WHERE token_id = $1
@@ -80,8 +85,23 @@ export async function calculateAndStoreTokenMetrics({ tokenId, currentPrice }: I
       [tokenId, minutes]
     );
     if (r.rows.length > 0) return parseFloat(r.rows[0].price);
-    // Không có snapshot trước mốc → dùng giá cũ (trước trade hiện tại)
-    return oldPrice > 0 ? oldPrice : 0.05;
+
+    // Không có snapshot trước mốc
+    // → Token còn trẻ hơn window: dùng giá launch để tính % từ đầu
+    const tokenAge = await query(
+      `SELECT EXTRACT(EPOCH FROM (NOW() - created_at))/60 AS age_minutes FROM tokens WHERE id = $1`,
+      [tokenId]
+    );
+    const ageMinutes = parseFloat(tokenAge.rows[0]?.age_minutes || '9999');
+
+    if (ageMinutes < minutes) {
+      // Token chưa đủ tuổi → so với giá launch
+      return LAUNCH_PRICE;
+    }
+
+    // Token đủ tuổi nhưng không có snapshot trước mốc
+    // → Không có trade nào trong window đó → giá không đổi → 0%
+    return null;
   };
 
   const calcChange = (past: number | null) =>

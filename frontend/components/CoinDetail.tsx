@@ -207,6 +207,16 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
     window.scrollTo(0, 0);
     loadBondingProgress();
     loadRealTokenData();
+
+    // Recalc metrics khi user load trang (sliding window có thể đã trượt)
+    if (coin.id) {
+      fetch('/api/tokens/calculate-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token_id: coin.id }),
+      }).then(() => loadTokenMetrics()).catch(() => {});
+    }
+
     loadTokenMetrics();
     fetchRealTrades();
     fetchRealComments();
