@@ -66,14 +66,11 @@ export async function calculateAndStoreTokenMetrics({ tokenId, currentPrice }: I
   );
   const trader_count = parseInt(traderRes.rows[0].cnt) || 0;
 
-  // ── Lưu snapshot giá hiện tại ────────────────────────────────────────
-  await query(
-    `INSERT INTO price_snapshots (token_id, price, recorded_at) VALUES ($1, $2, NOW())`,
-    [tokenId, price]
-  );
-
-  // ── Price changes: so giá hiện tại với snapshot tại mốc thời gian ────
+  // ── Price changes: tính TRƯỚC khi insert snapshot mới ───────────────
   // Giá quá khứ = snapshot gần nhất TẠI hoặc TRƯỚC mốc đó
+  // Fallback = price_snapshot_value cũ trong DB (giá trước trade này)
+  const oldPrice = parseFloat(token.price_snapshot_value || '0.05');
+
   const getPriceAtWindow = async (minutes: number): Promise<number | null> => {
     const r = await query(
       `SELECT price FROM price_snapshots
@@ -83,16 +80,8 @@ export async function calculateAndStoreTokenMetrics({ tokenId, currentPrice }: I
       [tokenId, minutes]
     );
     if (r.rows.length > 0) return parseFloat(r.rows[0].price);
-
-    // Không có snapshot trước mốc → lấy snapshot đầu tiên
-    const first = await query(
-      `SELECT price FROM price_snapshots
-       WHERE token_id = $1
-       ORDER BY recorded_at ASC LIMIT 1`,
-      [tokenId]
-    );
-    if (first.rows.length > 0) return parseFloat(first.rows[0].price);
-    return 0.05; // giá khởi tạo
+    // Không có snapshot trước mốc → dùng giá cũ (trước trade hiện tại)
+    return oldPrice > 0 ? oldPrice : 0.05;
   };
 
   const calcChange = (past: number | null) =>
@@ -114,6 +103,12 @@ export async function calculateAndStoreTokenMetrics({ tokenId, currentPrice }: I
       console.warn('Warning calculating price changes:', e);
     }
   }
+
+  // ── Insert snapshot SAU khi tính change ──────────────────────────────
+  await query(
+    `INSERT INTO price_snapshots (token_id, price, recorded_at) VALUES ($1, $2, NOW())`,
+    [tokenId, price]
+  );
 
   // ── Update DB ─────────────────────────────────────────────────────────
   const updateResult = await query(

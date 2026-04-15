@@ -220,26 +220,12 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
     const tradesInterval   = setInterval(fetchRealTrades, 5_000);
     const commentsFallbackInterval = setInterval(fetchRealComments, 20_000);
 
-    // Recalculate price_change windows mỗi 60s (sliding window)
-    const recalcInterval = setInterval(async () => {
-      if (!coin.id) return;
-      try {
-        await fetch('/api/tokens/calculate-metrics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token_id: coin.id }),
-        });
-        loadTokenMetrics();
-      } catch { /* silent */ }
-    }, 60_000);
-
     return () => {
       clearInterval(priceInterval);
       clearInterval(metricsInterval);
       clearInterval(progressInterval);
       clearInterval(tradesInterval);
       clearInterval(commentsFallbackInterval);
-      clearInterval(recalcInterval);
       disconnectCommentsStream();
     };
   }, [coin]);
@@ -264,16 +250,20 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
 
   // ── Called by TradeForm after successful buy ────────────────────────────────
   const handleTradeSuccess = async (tradeType: 'buy' | 'sell', totalPrice: number) => {
-    // Optimistic update — instant UI feedback, no waiting for DB
     const newVal = tradeType === 'buy'
       ? maxReserveRef.current + totalPrice
       : Math.max(0, maxReserveRef.current - totalPrice);
     maxReserveRef.current = newVal;
     setMaxReserve(newVal);
 
-    // Background sync — fire all in parallel, don't await so UI stays snappy
-    Promise.all([loadRealTokenData(), fetchRealTrades(), loadTokenMetrics(), loadBondingProgress()])
-      .then(() => setChartRefreshKey(k => k + 1));
+    // Fetch tất cả song song — cùng lúc update ngay
+    await Promise.all([
+      loadRealTokenData(),
+      fetchRealTrades(),
+      loadBondingProgress(),
+      loadTokenMetrics(),
+    ]);
+    setChartRefreshKey(k => k + 1);
   };
 
   const currentPrice = tokenData.priceHistory[tokenData.priceHistory.length - 1]?.price;

@@ -333,43 +333,32 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       setAmount('');
       loadBalances();
 
-      // Auto-add token to MetaMask only once per wallet+token pair (first successful buy)
+      // Trigger UI update ngay lập tức — không đợi MetaMask
+      if (onSuccess) onSuccess(mode, parseFloat(returnAmount));
+
+      // Auto-add token to MetaMask (background, không block UI)
       if (mode === 'buy' && coin.tokenAddress) {
-        try {
-          let signerAddress = userAddress;
-          if (!signerAddress && window.ethereum) {
-            const provider = await getProvider();
-            const signer = await provider.getSigner();
-            signerAddress = await signer.getAddress();
-          }
-
-          if (signerAddress) {
-            const storageKey = getWatchAssetKey(signerAddress, coin.tokenAddress);
-            const hasPrompted = localStorage.getItem(storageKey) === '1';
-
-            if (!hasPrompted) {
-              const wasAdded = await window.ethereum.request({
-                method: 'wallet_watchAsset',
-                params: {
-                  type: 'ERC20',
-                  options: {
-                    address: coin.tokenAddress,
-                    symbol: coin.ticker.slice(0, 11),
-                    decimals: 18,
-                    image: coin.imageUrl || '',
-                  },
-                },
-              });
-
-              if (wasAdded) {
-                localStorage.setItem(storageKey, '1');
+        (async () => {
+          try {
+            let signerAddress = userAddress;
+            if (!signerAddress && window.ethereum) {
+              const provider = await getProvider();
+              const signer = await provider.getSigner();
+              signerAddress = await signer.getAddress();
+            }
+            if (signerAddress) {
+              const storageKey = getWatchAssetKey(signerAddress, coin.tokenAddress!);
+              if (localStorage.getItem(storageKey) !== '1') {
+                const wasAdded = await window.ethereum.request({
+                  method: 'wallet_watchAsset',
+                  params: { type: 'ERC20', options: { address: coin.tokenAddress, symbol: coin.ticker.slice(0, 11), decimals: 18, image: coin.imageUrl || '' } },
+                });
+                if (wasAdded) localStorage.setItem(storageKey, '1');
               }
             }
-          }
-        } catch { /* user dismissed, silent */ }
+          } catch { /* silent */ }
+        })();
       }
-
-      if (onSuccess) await onSuccess(mode, parseFloat(returnAmount));
     } catch (error: any) {
       console.error('Trade error:', error);
       removeToast(toastId);
