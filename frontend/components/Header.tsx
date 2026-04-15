@@ -189,7 +189,7 @@ const Header = forwardRef<HeaderRef, HeaderProps>(({
             >
               <LifeBuoy className="w-4 h-4" /> Support
             </button>
-            <button className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors">
+            <button onClick={() => window.open('https://docs.oasis.io/', '_blank')} className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors">
               <HelpCircle className="w-4 h-4" /> Docs
             </button>
           </nav>
@@ -357,7 +357,7 @@ const Header = forwardRef<HeaderRef, HeaderProps>(({
           <nav className="flex flex-col gap-4">
             <button onClick={() => { onGoHome(); setMobileMenuOpen(false); }} className="flex items-center gap-3 text-gray-900 dark:text-white font-bold"><LayoutGrid className="w-5 h-5" /> Board</button>
             <button onClick={() => { onGoCreate(); setMobileMenuOpen(false); }} className="flex items-center gap-3 text-gray-900 dark:text-white font-bold"><PlusCircle className="w-5 h-5" /> Start Coin</button>
-            <button className="flex items-center gap-3 text-gray-600 dark:text-gray-400"><HelpCircle className="w-5 h-5" /> Docs</button>
+            <button onClick={() => window.open('https://docs.oasis.io/', '_blank')} className="flex items-center gap-3 text-gray-600 dark:text-gray-400"><HelpCircle className="w-5 h-5" /> Docs</button>
             {!walletConnected && (
               <button onClick={() => { onConnectWallet(); setMobileMenuOpen(false); }} className="flex items-center gap-3 text-green-600 dark:text-pump-green font-bold border border-green-600/30 dark:border-pump-green/30 rounded-lg p-3 justify-center"><Wallet className="w-5 h-5" /> Connect Wallet</button>
             )}

@@ -1,12 +1,40 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, Send, Book, Shield, Zap, ChevronRight, User } from 'lucide-react';
+import { MessageSquare, Send, Book, Shield, Zap, ChevronRight } from 'lucide-react';
+
+const faqItems = [
+    {
+        question: 'What happens when the curve reaches 100%?',
+        answer:
+            'At 100% bonding progress, soldSupply equals TOTAL_SUPPLY, so the token contract has no tokens left to sell and new buys revert with "Not enough tokens available". Holders can still sell back to the contract while sales remain enabled and reserveBalance is sufficient.'
+    },
+    {
+        question: 'How do I bridge funds to Oasis?',
+        answer:
+            'In this app you trade on Oasis Sapphire Testnet (chainId 23295, RPC https://testnet.sapphire.oasis.io). Switch your wallet to Sapphire Testnet first, then fund that same wallet on Sapphire (bridge or testnet funding flow) and verify your TEST balance before placing trades.'
+    },
+    {
+        question: 'Is there a developer wallet allocation?',
+        answer:
+            'There is no separate pre-minted developer allocation in the current token contract flow: supply starts in the token contract and is bought from the curve. The creator does receive trading fees (0.300% per trade), and the protocol wallet receives 0.800%, so always review fee mechanics before trading.'
+    },
+    {
+        question: 'Why is my transaction pending?',
+        answer:
+            'Most pending transactions are caused by low gas settings, nonce conflicts from multiple rapid submits, wallet RPC lag, or temporary network congestion. On Sapphire, wait for confirmation, then check explorer status; if still pending, use wallet speed-up/cancel and retry with updated gas and a fresh quote.'
+    }
+];
 
 const SupportPage: React.FC = () => {
   const [messages, setMessages] = useState<{id: number, text: string, sender: 'user' | 'agent'}[]>([
     { id: 1, text: 'Hello! Welcome to Oasis Astra support. How can we help you today?', sender: 'agent' }
   ]);
   const [inputText, setInputText] = useState('');
+    const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, [messages]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,17 +87,32 @@ const SupportPage: React.FC = () => {
                     <h2 className="font-bold text-gray-900 dark:text-white">Frequently Asked Questions</h2>
                 </div>
                 <div className="divide-y divide-gray-300 dark:divide-gray-800">
-                    {[
-                        "What happens when the curve reaches 100%?",
-                        "How do I bridge funds to Oasis?",
-                        "Is there a developer wallet allocation?",
-                        "Why is my transaction pending?"
-                    ].map((q, i) => (
-                        <div key={i} className="p-4 hover:bg-gray-100 dark:hover:bg-gray-800/50 cursor-pointer flex justify-between items-center group">
-                            <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">{q}</span>
-                            <ChevronRight className="w-4 h-4 text-gray-500" />
-                        </div>
-                    ))}
+                                        {faqItems.map((item, i) => {
+                                            const isOpen = openFaqIndex === i;
+
+                                            return (
+                                                <div key={item.question} className="hover:bg-gray-100 dark:hover:bg-gray-800/50">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setOpenFaqIndex(isOpen ? null : i)}
+                                                        className="w-full p-4 text-left flex justify-between items-center group"
+                                                    >
+                                                        <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
+                                                            {item.question}
+                                                        </span>
+                                                        <ChevronRight
+                                                            className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                                                        />
+                                                    </button>
+
+                                                    {isOpen && (
+                                                        <div className="px-4 pb-4">
+                                                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{item.answer}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                 </div>
             </div>
 
