@@ -482,10 +482,17 @@ export default function Home() {
         {viewState === ViewState.CREATE && (
           <CreateCoinPage
             onCancel={handleGoHome}
-            onTokenCreated={(addr) => {
+            onTokenCreated={async (addr) => {
               addToast('success', 'Token Created', `Address: ${addr}`);
-              fetchRealTokens();
-              handleGoHome();
+              await fetchRealTokens();
+              // Navigate thẳng đến token mới
+              const newToken = realTokens.find(t => t.contractAddress?.toLowerCase() === addr.toLowerCase());
+              if (newToken) {
+                setSelectedCoin(newToken);
+                setViewState(ViewState.DETAIL);
+              } else {
+                handleGoHome();
+              }
             }}
           />
         )}

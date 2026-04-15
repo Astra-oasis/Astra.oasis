@@ -13,11 +13,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const INITIAL_PRICE = 0.05;
+        const supply = parseFloat(String(totalSupply || 0));
+        const initialMarketcap = INITIAL_PRICE * supply;
+
         const result = await query(
-            `INSERT INTO tokens (name, symbol, description, image_url, social_link, total_supply, owner, contract_address, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW() + INTERVAL '7 hours')
+            `INSERT INTO tokens (name, symbol, description, image_url, social_link, total_supply, owner, contract_address,
+             price_snapshot_value, price_snapshot_time,
+             marketcap, volume_24h, price_change_5m, price_change_1h, price_change_6h, trader_count,
+             created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10, 0, 0, 0, 0, 0, NOW() + INTERVAL '7 hours')
        RETURNING *`,
-            [name, symbol, description || null, image_url || null, social_link || null, totalSupply || 0, owner, contractAddress]
+            [name, symbol, description || null, image_url || null, social_link || null,
+             supply, owner, contractAddress, INITIAL_PRICE, initialMarketcap]
         );
 
         return NextResponse.json({
