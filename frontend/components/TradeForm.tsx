@@ -37,6 +37,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
   const [totalFee, setTotalFee] = useState('0');
   const [baseAmount, setBaseAmount] = useState('0');
   const [processingToastId, setProcessingToastId] = useState<string | null>(null);
+  const [isCalculatingMax, setIsCalculatingMax] = useState(false);
+  const [maxAmountCache, setMaxAmountCache] = useState<{balance: string, price: string, amount: string} | null>(null);
 
   const getProvider = async () => {
     let ethereum = window.ethereum;
@@ -60,15 +62,29 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       setUserAddress(address);
 
       const ethBalance = await provider.getBalance(address);
-      setBalance(formatEther(ethBalance));
-
+      const newBalance = formatEther(ethBalance);
+      
       const tokenContract = new Contract(coin.tokenAddress, TOKEN_ABI, provider);
       const tBalance = await tokenContract.balanceOf(address);
       setTokenBalance(formatEther(tBalance));
 
       // Get current price
       const price = await tokenContract.getCurrentPrice();
-      setCurrentPrice(formatEther(price));
+      const newPrice = formatEther(price);
+      
+      // Clear cache nếu balance hoặc price thay đổi
+      if (maxAmountCache) {
+        const balanceChanged = maxAmountCache.balance !== parseFloat(newBalance).toFixed(6);
+        const priceChanged = maxAmountCache.price !== parseFloat(newPrice).toFixed(8);
+        
+        if (balanceChanged || priceChanged) {
+          console.log('Clearing max amount cache due to balance/price change');
+          setMaxAmountCache(null);
+        }
+      }
+      
+      setBalance(newBalance);
+      setCurrentPrice(newPrice);
     } catch (error) {
       console.error('Error loading balances:', error);
     }
@@ -217,25 +233,136 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
     }
   };
 
-  const calculateAndUpdateMetrics = async (tokenId: number) => {
+  const calculateMaxBuyAmount = async () => {
+    if (!coin.tokenAddress || !window.ethereum) return;
+    
+    setIsCalculatingMax(true);
     try {
-      const metricsResponse = await fetch('/api/tokens/calculate-metrics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token_id: tokenId,
-        }),
-      });
-
-      if (metricsResponse.ok) {
-        const metricsData = await metricsResponse.json();
-        console.log('Metrics updated:', metricsData.data.metrics);
-        window.dispatchEvent(new CustomEvent('token-metrics-updated'));
-      } else {
-        console.warn('Failed to update metrics');
+      const provider = await getProvider();
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      
+      // Get current ETH balance
+      const ethBalance = await provider.getBalance(address);
+      const ethBalanceNum = parseFloat(formatEther(ethBalance));
+      
+      // Reserve gas for transaction (estimate ~0.01 TEST for gas)
+      const gasReserve = 0.01;
+      const availableEth = Math.max(0, ethBalanceNum - gasReserve);
+      
+      if (availableEth <= 0) {
+        showToast('error', 'Insufficient Balance', 'Not enough TEST for gas fees');
+        return;
       }
+      
+      // Get current price for cache key
+      const currentPriceNum = parseFloat(currentPrice);
+      if (currentPriceNum <= 0) {
+        showToast('error', 'Price Error', 'Cannot get current token price');
+        return;
+      }
+      
+      // Check cache - sử dụng balance và price làm key
+      const cacheKey = {
+        balance: ethBalanceNum.toFixed(6), // 6 decimal precision for balance
+        price: currentPriceNum.toFixed(8)  // 8 decimal precision for price
+      };
+      
+      // Nếu cache match thì dùng luôn
+      if (maxAmountCache && 
+          maxAmountCache.balance === cacheKey.balance && 
+          maxAmountCache.price === cacheKey.price) {
+        console.log('Using cached max amount:', maxAmountCache.amount);
+        setAmount(maxAmountCache.amount);
+        return;
+      }
+      
+      console.log('Calculating new max amount - cache miss or invalid');
+      
+      const tokenContract = new Contract(coin.tokenAddress, TOKEN_ABI, provider);
+      
+      // Calculate total fee rate (0.3% + 0.8% = 1.1%)
+      const totalFeeRate = CREATOR_FEE_RATE + PROTOCOL_FEE_RATE;
+      
+      // Smart estimation: start with available ETH divided by current price, accounting for fees
+      // availableEth = baseCost + fees, where fees = baseCost * totalFeeRate
+      // availableEth = baseCost * (1 + totalFeeRate)
+      // baseCost = availableEth / (1 + totalFeeRate)
+      const estimatedBaseCost = availableEth / (1 + totalFeeRate);
+      let estimatedAmount = estimatedBaseCost / currentPriceNum;
+      
+      // Check available supply limit
+      try {
+        const available = await tokenContract.getAvailableTokens();
+        const availableNum = parseFloat(formatEther(available));
+        estimatedAmount = Math.min(estimatedAmount, availableNum);
+      } catch (e) {
+        console.warn('Could not fetch available tokens, using price estimation');
+      }
+      
+      // Ensure minimum bounds
+      estimatedAmount = Math.max(0.1, estimatedAmount);
+      
+      // Fine-tune with binary search (only 5-8 iterations for speed)
+      let low = Math.max(0.1, estimatedAmount * 0.8); // Start closer to estimate
+      let high = Math.min(estimatedAmount * 1.2, 900_000_000);
+      let maxAmount = 0;
+      
+      for (let i = 0; i < 8 && high - low > 0.01; i++) {
+        const mid = (low + high) / 2;
+        
+        try {
+          const amountWei = parseEther(mid.toString());
+          const cost = await tokenContract.getBuyPrice(amountWei);
+          const costEth = parseFloat(formatEther(cost));
+          
+          // Calculate total cost including fees
+          const totalCost = costEth * (1 + totalFeeRate);
+          
+          if (totalCost <= availableEth) {
+            maxAmount = mid;
+            low = mid;
+          } else {
+            high = mid;
+          }
+        } catch (error) {
+          // If we can't get price, this amount is too high
+          high = mid;
+        }
+      }
+      
+      if (maxAmount > 0) {
+        // Round down to avoid precision issues
+        const roundedAmount = Math.floor(maxAmount * 100) / 100;
+        const finalAmount = roundedAmount.toString();
+        
+        // Cache kết quả
+        setMaxAmountCache({
+          balance: cacheKey.balance,
+          price: cacheKey.price,
+          amount: finalAmount
+        });
+        
+        console.log('Cached new max amount:', finalAmount);
+        setAmount(finalAmount);
+      } else {
+        showToast('error', 'Cannot Buy', 'Insufficient balance for minimum purchase');
+      }
+      
     } catch (error) {
-      console.warn('Error calculating metrics:', error);
+      console.error('Error calculating max buy amount:', error);
+      showToast('error', 'Calculation Failed', 'Could not calculate maximum amount');
+    } finally {
+      setIsCalculatingMax(false);
+    }
+  };
+
+  const handleMaxClick = async () => {
+    if (mode === 'buy') {
+      await calculateMaxBuyAmount();
+    } else {
+      // For sell, use all token balance
+      setAmount(tokenBalance);
     }
   };
 
@@ -331,6 +458,10 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       removeToast(toastId);
       showToast('success', 'Transaction Successful', `${mode === 'buy' ? 'Buy' : 'Sell'} ${amount} ${symbol}`);
       setAmount('');
+      
+      // Clear cache sau khi giao dịch thành công vì balance đã thay đổi
+      setMaxAmountCache(null);
+      
       loadBalances();
 
       // Trigger UI update ngay lập tức — không đợi MetaMask
@@ -413,7 +544,20 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
           <div className="bg-gray-100 dark:bg-gray-900/80 rounded-lg p-4 border border-gray-300 dark:border-gray-800 focus-within:border-pump-green/50 transition-colors">
             <div className="flex justify-between text-xs font-bold text-gray-600 dark:text-gray-500 mb-2">
               <span className="uppercase">{mode === 'buy' ? `Amount (${symbol})` : `Amount (${symbol})`}</span>
-              <span className="uppercase cursor-pointer hover:text-gray-900 dark:hover:text-white" onClick={() => setAmount(mode === 'buy' ? '100' : tokenBalance)}>Max</span>
+              <button 
+                className="uppercase cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1" 
+                onClick={handleMaxClick}
+                disabled={isCalculatingMax}
+              >
+                {isCalculatingMax ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Calculating...</span>
+                  </>
+                ) : (
+                  'Max'
+                )}
+              </button>
             </div>
             <div className="flex items-center justify-between gap-4">
               <input
