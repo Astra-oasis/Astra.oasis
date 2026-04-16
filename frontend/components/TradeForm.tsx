@@ -246,8 +246,8 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       const ethBalance = await provider.getBalance(address);
       const ethBalanceNum = parseFloat(formatEther(ethBalance));
       
-      // Reserve gas for transaction (estimate ~0.01 TEST for gas)
-      const gasReserve = 0.01;
+      // Reserve gas for transaction (0.3 TEST for network fees)
+      const gasReserve = 0.3;
       const availableEth = Math.max(0, ethBalanceNum - gasReserve);
       
       if (availableEth <= 0) {
