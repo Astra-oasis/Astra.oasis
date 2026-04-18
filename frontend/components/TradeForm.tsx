@@ -302,13 +302,26 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
       
       // Ensure minimum bounds
       estimatedAmount = Math.max(0.1, estimatedAmount);
-      
-      // Fine-tune with binary search (only 5-8 iterations for speed)
-      let low = Math.max(0.1, estimatedAmount * 0.8); // Start closer to estimate
+
+      // Binary search: luôn bắt đầu từ low=0.1 để tránh trường hợp estimate sai
+      // khiến toàn bộ range bị lỗi và maxAmount = 0
+      let low = 0.1;
       let high = Math.min(estimatedAmount * 1.2, 900_000_000);
       let maxAmount = 0;
-      
-      for (let i = 0; i < 8 && high - low > 0.01; i++) {
+
+      // Verify high bound trước — nếu high cũng lỗi thì kéo xuống dần
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          const amountWei = parseEther(high.toString());
+          const cost = await tokenContract.getBuyPrice(amountWei);
+          parseFloat(formatEther(cost)); // just validate
+          break; // high hợp lệ
+        } catch {
+          high = high / 2;
+        }
+      }
+
+      for (let i = 0; i < 10 && high - low > 0.01; i++) {
         const mid = (low + high) / 2;
         
         try {
@@ -329,6 +342,19 @@ const TradeForm: React.FC<TradeFormProps> = ({ coin, showToast, removeToast, onS
           // If we can't get price, this amount is too high
           high = mid;
         }
+      }
+
+      // Fallback: nếu binary search vẫn ra 0, thử trực tiếp với 0.1
+      if (maxAmount === 0) {
+        try {
+          const amountWei = parseEther('0.1');
+          const cost = await tokenContract.getBuyPrice(amountWei);
+          const costEth = parseFloat(formatEther(cost));
+          const totalCost = costEth * (1 + totalFeeRate);
+          if (totalCost <= availableEth) {
+            maxAmount = 0.1;
+          }
+        } catch { /* silent */ }
       }
       
       if (maxAmount > 0) {
