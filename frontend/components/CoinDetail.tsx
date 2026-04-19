@@ -128,17 +128,35 @@ const CoinDetail: React.FC<CoinDetailProps> = ({ coin, onBack, showToast, remove
       const res = await fetch(`/api/comments?tokenId=${coin.id}`);
       const data = await res.json();
       if (data.success && data.data) {
+        const vnDateTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+
         const toDisplayTimeString = (value: string) => {
-          const dt = new Date(value);
+          const normalized = value.replace(' ', 'T');
+          const hasTimeZone = /[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized);
+          let dt: Date;
+
+          if (!hasTimeZone && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(normalized)) {
+            const [datePart, timePart] = normalized.split('T');
+            const [year, month, day] = datePart.split('-').map(Number);
+            const [hour, minute, second] = timePart.split(':').map(Number);
+            dt = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+          } else {
+            dt = new Date(value);
+          }
+
           if (Number.isNaN(dt.getTime())) return value;
-          return dt.toLocaleString([], {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          });
+
+          const parts = vnDateTimeFormatter.formatToParts(dt);
+          const byType = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+          return `${byType.hour}:${byType.minute} ${byType.day}/${byType.month}/${byType.year}`;
         };
 
         setComments(data.data.map((c: any) => ({

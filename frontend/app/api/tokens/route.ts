@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
                 price_change_5m, price_change_1h, price_change_6h,
                 trader_count, created_at
              )
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),$10,0,0,0,0,0,NOW() + INTERVAL '7 hours')
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW(),$10,0,0,0,0,0,NOW())
              RETURNING *`,
             [
                 name, symbol, description || null, image_url || null, social_link || null,
@@ -188,9 +188,26 @@ export async function GET(request: NextRequest) {
 
         const result = await query(sql, params.length > 0 ? params : undefined);
 
+        const normalizedRows = result.rows.map((row: any) => {
+            const createdAt = new Date(row.created_at);
+            if (Number.isNaN(createdAt.getTime())) {
+                return row;
+            }
+
+            // Backward-compat for rows previously saved with +7h offset.
+            if (createdAt.getTime() > Date.now() + (30 * 60 * 1000)) {
+                return {
+                    ...row,
+                    created_at: new Date(createdAt.getTime() - (7 * 60 * 60 * 1000)).toISOString(),
+                };
+            }
+
+            return row;
+        });
+
         const response = NextResponse.json({
             success: true,
-            data: result.rows,
+            data: normalizedRows,
         });
 
         return response;

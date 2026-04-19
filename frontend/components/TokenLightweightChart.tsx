@@ -166,14 +166,16 @@ export default function TokenLightweightChart({
             const nowBucket = getBucketTime(nowSec, intervalSec);
             const createdAtSec = (() => {
                 if (typeof createdAt === 'number' && createdAt > 0) {
-                    return createdAt > 1_000_000_000_000
+                    const raw = createdAt > 1_000_000_000_000
                         ? Math.floor(createdAt / 1000)
                         : Math.floor(createdAt);
+                    return raw > nowSec + 1800 ? raw - (7 * 3600) : raw;
                 }
                 if (typeof createdAt === 'string') {
                     const ms = Date.parse(createdAt);
                     if (!Number.isNaN(ms) && ms > 0) {
-                        return Math.floor(ms / 1000);
+                        const raw = Math.floor(ms / 1000);
+                        return raw > nowSec + 1800 ? raw - (7 * 3600) : raw;
                     }
                 }
                 return null;
